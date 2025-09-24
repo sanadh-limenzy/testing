@@ -95,14 +95,17 @@ export default function ReimbursementPlanPage() {
       <h2 className="text-2xl font-bold mb-4">Reimbursement Plan</h2>
 
       <div className="w-full max-w-6xl h-full overflow-hidden">
-        <iframe
-          key={refreshKey} // Force refresh when data changes
-          src={reimbursementPlanData?.signature_doc_url || ""}
-          width="100%"
-          height="100%"
-          className="w-full h-full"
-          title="Reimbursement Plan"
-        />
+        {reimbursementPlanData?.signature_doc_url &&
+          reimbursementPlanData?.signature_doc_url.length > 0 && (
+            <iframe
+              key={refreshKey} // Force refresh when data changes
+              src={reimbursementPlanData?.signature_doc_url || ""}
+              width="100%"
+              height="100%"
+              className="w-full h-full"
+              title="Reimbursement Plan"
+            />
+          )}
       </div>
 
       <div className="flex gap-2 mt-4">
