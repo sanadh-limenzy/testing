@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       const pdfResult = await pdfService.generatePDF(html, {
         filename: "reimbursement-plan",
         orientation: "portrait",
-        paperSize: "A4",
+        paperSize: "a4",
         printBackground: true,
       });
 

@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
     const result = await pdfService.generatePDF(html, {
       filename: "reimbursement-plan",
       orientation: "portrait",
-      paperSize: "A4",
+      paperSize: "a4",
       margins: {
         top: "0.5in",
         right: "0.25in",

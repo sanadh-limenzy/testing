@@ -1,10 +1,11 @@
 /**
- * @fileoverview Efficient PDF generation service using Puppeteer
+ * @fileoverview Efficient PDF generation service using @sparticuz/chromium
  * @author v0-theaugustarule-express
  * @version 1.0.0
  */
 
-import puppeteer, { Browser, PaperFormat } from "puppeteer";
+import puppeteer, { Browser } from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import { format } from "date-fns";
 import fs from "fs";
 import path from "path";
@@ -12,7 +13,7 @@ import path from "path";
 type PDFOptions = {
   filename?: string;
   orientation?: "portrait" | "landscape";
-  paperSize?: PaperFormat;
+  paperSize?: "a4" | "a3" | "a2" | "a1" | "a0" | "letter" | "legal" | "tabloid";
   margins?: { top?: string; right?: string; bottom?: string; left?: string };
   printBackground?: boolean;
   displayHeaderFooter?: boolean;
@@ -32,14 +33,14 @@ class PDFService {
   }
 
   async initBrowser() {
-    if (this.browser && !this.browser.connected) {
+    if (this.browser && !this.browser.isConnected()) {
       console.log(
         "PDF Service: Browser disconnected, forcing reinitialization"
       );
       this.browser = null;
     }
 
-    if (this.browser && this.browser.connected) {
+    if (this.browser && this.browser.isConnected()) {
       return this.browser;
     }
 
@@ -49,7 +50,7 @@ class PDFService {
         await new Promise((resolve) => setTimeout(resolve, 100));
         attempts++;
       }
-      if (this.browser && this.browser.connected) {
+      if (this.browser && this.browser.isConnected()) {
         return this.browser;
       }
     }
@@ -72,8 +73,8 @@ class PDFService {
       }
 
       this.browser = await puppeteer.launch({
-        headless: true, // Use new headless mode
         args: [
+          ...chromium.args,
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
@@ -87,7 +88,9 @@ class PDFService {
           "--disable-renderer-backgrounding",
           "--disable-ipc-flooding-protection",
         ],
-        timeout: 30000, // 30 second timeout
+        executablePath: await chromium.executablePath(),
+        headless: true,
+        browser:"chrome",
       });
 
       // Handle browser disconnect
@@ -174,7 +177,7 @@ class PDFService {
       displayHeaderFooter: false,
       filename: "",
       orientation: "portrait",
-      paperSize: "A4",
+      paperSize: "a4",
       margins: {
         top: "0.5in",
         right: "0.25in",
@@ -198,7 +201,7 @@ class PDFService {
     const {
       filename,
       orientation = "portrait",
-      paperSize = "A4",
+      paperSize = "a4",
       margins = {
         top: "0.5in",
         right: "0.25in",
@@ -220,7 +223,7 @@ class PDFService {
         const browser = await this.initBrowser();
 
         // Check if browser is still connected
-        if (!browser.connected) {
+        if (!browser.isConnected()) {
           throw new Error("Browser is not connected");
         }
 

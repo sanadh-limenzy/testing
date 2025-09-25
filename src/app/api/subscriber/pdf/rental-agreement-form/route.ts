@@ -6,7 +6,7 @@ import { rentalAgreementToHtml } from "@/html-to-pdf/rental-agreement-forms";
 export interface PDFOptions {
   filename: string;
   orientation?: "portrait" | "landscape";
-  paperSize?: "A4" | "Letter" | "Legal";
+  paperSize?: "a4" | "letter" | "legal";
   margins?: {
     top?: string;
     right?: string;
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
     const result = await pdfService.generatePDF(html, {
       filename: "rental-agreement",
       orientation: "portrait",
-      paperSize: "A4",
+        paperSize: "a4",
       margins: {
         top: "0.5in",
         right: "0.25in",

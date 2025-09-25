@@ -647,7 +647,7 @@ export async function PUT(
             const result = await pdfService.generatePDF(html, {
               filename: "event-invoice",
               orientation: "portrait",
-              paperSize: "A4",
+              paperSize: "a4",
               margins: {
                 top: "0.5in",
                 right: "0.25in",

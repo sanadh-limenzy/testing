@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     const pdfResult = await pdfService.generatePDF(html, {
       filename: `rental-agreement-${event.event_number || event.id}`,
       orientation: "portrait",
-      paperSize: "A4",
+      paperSize: "a4",
       printBackground: true,
     });
     const s3Result = await uploadFileToS3(
