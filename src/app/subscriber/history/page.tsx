@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useDeleteEvent } from "@/hooks/useEvent";
+import { useDeleteEvent, useEventsPerRentalAddress } from "@/hooks/useEvent";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,11 +40,6 @@ import { meetsMinimumDuration } from "@/lib/time-utils";
 import Link from "next/link";
 import { RentalPropertiesResponse } from "@/hooks/useAddress";
 
-interface EventsResponse {
-  success: boolean;
-  data: EventDatabaseWithAllData[];
-}
-
 export default function SubscriberHistory() {
   const [selectedResidence, setSelectedResidence] = useState<string>("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -71,29 +66,11 @@ export default function SubscriberHistory() {
     },
   });
 
-  // Fetch events for selected residence
   const {
     data: eventsData,
     isLoading: isLoadingEvents,
     error: eventsError,
-  } = useQuery<EventsResponse>({
-    queryKey: ["events", selectedResidence],
-    queryFn: async () => {
-      if (!selectedResidence) {
-        return { success: true, data: [] };
-      }
-
-      const response = await fetch(
-        `/api/events?rental_address_id=${selectedResidence}`
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch events");
-      }
-      return response.json();
-    },
-    enabled: !!selectedResidence,
-  });
+  } = useEventsPerRentalAddress(selectedResidence);
 
   const rentalProperties = rentalPropertiesData?.data || [];
   const events = eventsData?.data || [];
@@ -364,14 +341,6 @@ function EventCard({
         color: "text-blue-700",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
-      };
-    if (event.is_posted)
-      return {
-        label: "Active",
-        variant: "default" as const,
-        color: "text-green-700",
-        bgColor: "bg-green-50",
-        borderColor: "border-green-200",
       };
     return {
       label: "Pending",

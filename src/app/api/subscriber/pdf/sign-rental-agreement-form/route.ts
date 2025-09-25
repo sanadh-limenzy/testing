@@ -3,6 +3,7 @@ import { pdfService } from "@/lib/pdf-utils";
 import { deleteFileFromS3, uploadFileToS3 } from "@/lib/s3-utils";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { signedRentalAgreementToHtml } from "@/html-to-pdf/rental-agreement-forms";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
     } else {
       console.log("Proposal updated successfully");
     }
+
+    revalidatePath("/subscriber/rental-agreement");
+    revalidateTag("rental-agreement-page");
 
     return NextResponse.json({
       file_name: pdfResult.filename,

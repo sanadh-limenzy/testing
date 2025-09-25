@@ -66,10 +66,10 @@ export function useUpdateEvent() {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate and refetch event data
-      queryClient.invalidateQueries({ queryKey: ["event", variables.eventId] });
-      queryClient.cancelQueries({ queryKey: ["event", variables.eventId] });
+      queryClient.invalidateQueries({ queryKey: ["event"] });
+      queryClient.cancelQueries({ queryKey: ["event"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.cancelQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["rental-property"] });
@@ -78,6 +78,8 @@ export function useUpdateEvent() {
         queryKey: ["events-from-rental-address"],
       });
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
+      queryClient.invalidateQueries({ queryKey: ["rental-agreement"] });
+      queryClient.cancelQueries({ queryKey: ["rental-agreement"] });
     },
   });
 }
@@ -103,13 +105,44 @@ export function useDeleteEvent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
-      queryClient.invalidateQueries({ queryKey: ["rental-property"] });
       queryClient.cancelQueries({ queryKey: ["events"] });
+      queryClient.refetchQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["rental-property"] });
       queryClient.cancelQueries({ queryKey: ["rental-property"] });
+      queryClient.refetchQueries({ queryKey: ["rental-property"] });
       queryClient.invalidateQueries({
         queryKey: ["events-from-rental-address"],
       });
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
+      queryClient.refetchQueries({ queryKey: ["events-from-rental-address"] });
+    },
+    onMutate: async (eventId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["events"] });
+
+      const previousEvents = queryClient.getQueryData<EventsResponse>([
+        "events",
+      ]);
+
+      queryClient.setQueryData<EventsResponse>(["events"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.filter((event) => event.id !== eventId),
+        };
+      });
+
+      queryClient.setQueryData<{ data: EventDatabase[] }>(
+        ["events-from-rental-address"],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.filter((event) => event.id !== eventId),
+          };
+        }
+      );
+
+      return { previousEvents };
     },
   });
 }
@@ -166,7 +199,7 @@ export function useCreateEvent() {
         );
       }
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({
         queryKey: ["events-from-rental-address"],
@@ -175,12 +208,6 @@ export function useCreateEvent() {
       queryClient.cancelQueries({ queryKey: ["events"] });
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
       queryClient.cancelQueries({ queryKey: ["rental-property"] });
-      if (data.data) {
-        queryClient.setQueryData(["event", data.data.id], {
-          success: true,
-          data: data.data,
-        });
-      }
     },
     onError: (error) => {
       console.error("Event creation failed:", error);
@@ -347,5 +374,33 @@ export function useAddress(addressId: string | undefined) {
       return result.data;
     },
     enabled: !!addressId,
+  });
+}
+
+interface EventsResponse {
+  success: boolean;
+  data: EventDatabaseWithAllData[];
+}
+
+export function useEventsPerRentalAddress(
+  selectedResidence: string | undefined
+) {
+  return useQuery<EventsResponse>({
+    queryKey: ["events", selectedResidence],
+    queryFn: async () => {
+      if (!selectedResidence) {
+        return { success: true, data: [] };
+      }
+
+      const response = await fetch(
+        `/api/events?rental_address_id=${selectedResidence}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch events");
+      }
+      return response.json();
+    },
+    enabled: !!selectedResidence,
   });
 }

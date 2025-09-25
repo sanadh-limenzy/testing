@@ -3,6 +3,7 @@ import { pdfService } from "@/lib/pdf-utils";
 import { deleteFileFromS3, uploadFileToS3 } from "@/lib/s3-utils";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rentalAgreementToHtml } from "@/html-to-pdf/rental-agreement-forms";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -187,7 +188,8 @@ export async function POST(request: NextRequest) {
       } else {
         return NextResponse.json(
           {
-            ...proposal,
+            proposal,
+            success: true,
           },
           { status: 200 }
         );
@@ -262,7 +264,9 @@ export async function POST(request: NextRequest) {
       proposal = updatedProposal;
     }
 
-    return NextResponse.json(proposal, { status: 200 });
+    revalidatePath("/subscriber/rental-agreement");
+    revalidateTag("rental-agreement-page");
+    return NextResponse.json({ proposal, success: true }, { status: 200 });
   } catch (error) {
     console.error("PDF generation error:", error);
     return NextResponse.json(
