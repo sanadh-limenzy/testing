@@ -4,16 +4,18 @@
  * @version 1.0.0
  */
 
-import puppeteer, { Browser } from "puppeteer-core";
+import puppeteer, { Browser as PuppeteerBrowser } from "puppeteer";
+import puppeteerCore, { Browser as PuppeteerCoreBrowser } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { format } from "date-fns";
 import fs from "fs";
 import path from "path";
+import { env } from "@/env";
 
 type PDFOptions = {
   filename?: string;
   orientation?: "portrait" | "landscape";
-  paperSize?: "a4" | "a3" | "a2" | "a1" | "a0" | "letter" | "legal" | "tabloid";
+  paperSize?: "a4" | "a3" | "a2" | "a1" | "a0" | "letter" | "legal" | "tabloid" | "A4";
   margins?: { top?: string; right?: string; bottom?: string; left?: string };
   printBackground?: boolean;
   displayHeaderFooter?: boolean;
@@ -24,23 +26,26 @@ type PDFOptions = {
  * PDF generation service with browser instance pooling and optimization
  */
 class PDFService {
-  private browser: Browser | null;
+  private browser: PuppeteerCoreBrowser | PuppeteerBrowser | null;
   private isInitializing: boolean;
+  private isProduction: boolean;
 
   constructor() {
     this.browser = null;
     this.isInitializing = false;
+    this.isProduction = env.NODE_ENV !== "development" && !env.NEXT_PUBLIC_BACKEND_SITE.includes("localhost");
+    console.log("PDF Service: isProduction", this.isProduction);
   }
 
   async initBrowser() {
-    if (this.browser && !this.browser.isConnected()) {
+    if (this.browser && !this.browser.connected) {
       console.log(
         "PDF Service: Browser disconnected, forcing reinitialization"
       );
       this.browser = null;
     }
 
-    if (this.browser && this.browser.isConnected()) {
+    if (this.browser && this.browser.connected) {
       return this.browser;
     }
 
@@ -50,7 +55,7 @@ class PDFService {
         await new Promise((resolve) => setTimeout(resolve, 100));
         attempts++;
       }
-      if (this.browser && this.browser.isConnected()) {
+      if (this.browser && this.browser.connected) {
         return this.browser;
       }
     }
@@ -72,26 +77,47 @@ class PDFService {
         this.browser = null;
       }
 
-      this.browser = await puppeteer.launch({
-        args: [
-          ...chromium.args,
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--disable-web-security",
-          "--disable-features=VizDisplayCompositor",
-          "--no-first-run",
-          "--no-zygote",
-          "--disable-background-timer-throttling",
-          "--disable-backgrounding-occluded-windows",
-          "--disable-renderer-backgrounding",
-          "--disable-ipc-flooding-protection",
-        ],
-        executablePath: await chromium.executablePath(),
-        headless: true,
-        browser:"chrome",
-      });
+      if (this.isProduction) {
+        this.browser = await puppeteerCore.launch({
+          args: [
+            ...chromium.args,
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+            "--no-first-run",
+            "--no-zygote",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-ipc-flooding-protection",
+          ],
+          executablePath: await chromium.executablePath(),
+          headless: true,
+          browser: "chrome",
+        });
+      } else {
+        this.browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+            "--no-first-run",
+            "--no-zygote",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-ipc-flooding-protection",
+          ],
+          timeout: 30000,
+        });
+      }
 
       // Handle browser disconnect
       this.browser.on("disconnected", () => {
@@ -177,7 +203,7 @@ class PDFService {
       displayHeaderFooter: false,
       filename: "",
       orientation: "portrait",
-      paperSize: "a4",
+      paperSize:  this.isProduction ? "a4" : "A4",
       margins: {
         top: "0.5in",
         right: "0.25in",
@@ -201,7 +227,7 @@ class PDFService {
     const {
       filename,
       orientation = "portrait",
-      paperSize = "a4",
+      paperSize = this.isProduction ? "a4" : "A4",
       margins = {
         top: "0.5in",
         right: "0.25in",
@@ -223,7 +249,7 @@ class PDFService {
         const browser = await this.initBrowser();
 
         // Check if browser is still connected
-        if (!browser.isConnected()) {
+        if (!browser.connected) {
           throw new Error("Browser is not connected");
         }
 

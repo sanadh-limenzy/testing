@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
+import { reimbursementPlanToHtml } from "@/html-to-pdf/reimbursement-plan";
+import { pdfService } from "@/lib/pdf-utils";
+import { uploadFileToS3 } from "@/lib/s3-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +11,7 @@ interface ResetReimbursementPlanResponse {
   success: boolean;
   data?: {
     proposal_id: string;
+    signature_doc_url?: string;
   };
   error?: string;
   message?: string;
@@ -62,11 +66,34 @@ export async function POST(): Promise<
       );
     }
 
+    const html = reimbursementPlanToHtml();
+
+    const result = await pdfService.generatePDF(html, {
+      filename: "reimbursement-plan",
+    });
+
+    // Upload PDF to S3
+    const s3Result = await uploadFileToS3(
+      result.buffer,
+      "reimbursement-plans",
+      user.id,
+      {
+        filename: "reimbursement-plan",
+        contentType: "application/pdf",
+      }
+    );
+
+    if (!s3Result.success) {
+      return NextResponse.json(
+        { error: "Failed to upload reimbursement plan", success: false },
+        { status: 500 }
+      );
+    }
     // Reset the proposal to system generated
     const { data: updatedProposal, error: updateError } = await supabase
       .from("proposals")
       .update({
-        signature_doc_url: null,
+        signature_doc_url: s3Result.url,
         is_manual_agreement: null,
         updated_at: new Date().toISOString(),
         is_signature_done: false,
@@ -85,11 +112,13 @@ export async function POST(): Promise<
     }
 
     revalidateTag("reimbursement-plan-page");
+    revalidatePath("/subscriber/reimbursement-plan");
 
     return NextResponse.json({
       success: true,
       data: {
         proposal_id: updatedProposal.id,
+        signature_doc_url: s3Result.url,
       },
       message: "Reimbursement plan reset to system generated successfully",
     });

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { reimbursementPlanToHtml } from "@/html-to-pdf/reimbursement-plan";
 import { pdfService } from "@/lib/pdf-utils";
-import { uploadFileToS3 } from "@/lib/s3-utils";
-import { revalidateTag } from "next/cache";
+import { deleteFileFromS3, uploadFileToS3 } from "@/lib/s3-utils";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -139,9 +139,6 @@ export async function POST(request: NextRequest) {
 
       const pdfResult = await pdfService.generatePDF(html, {
         filename: "reimbursement-plan",
-        orientation: "portrait",
-        paperSize: "a4",
-        printBackground: true,
       });
 
       // Upload the signed PDF to S3
@@ -161,6 +158,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (proposal.signature_doc_url && proposal.signature_doc_url !== "") {
+        await deleteFileFromS3(proposal.signature_doc_url);
+      }
+
       const { error: updateError } = await supabase
         .from("proposals")
         .update({
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
           signature_doc_url: uploadResponse.url,
         })
-        .eq("id", proposal_id)
+        .eq("id", proposal.id)
         .eq("created_by", user.id)
         .eq("form_type", "Reimbursement_Plan")
         .select();
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
       }
 
       revalidateTag("reimbursement-plan-page");
+      revalidatePath("/subscriber/reimbursement-plan");
 
       return NextResponse.json({
         success: true,

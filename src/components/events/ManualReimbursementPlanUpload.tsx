@@ -25,7 +25,7 @@ export default function ManualReimbursementPlanUpload({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileUploadRef = useRef<FileUploadRef>(null);
   const { session } = useAuth();
-  const { mutate: uploadManualPlan, isPending: isUploading } = useManualReimbursementPlanUpload();
+  const { mutateAsync: uploadManualPlan, isPending: isUploading } = useManualReimbursementPlanUpload();
 
   const handleFileChange = (files: File[]) => {
     if (files.length > 0) {
@@ -35,7 +35,7 @@ export default function ManualReimbursementPlanUpload({
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!uploadedFile) {
       return;
     }
@@ -44,7 +44,7 @@ export default function ManualReimbursementPlanUpload({
       return;
     }
 
-    uploadManualPlan(
+    await uploadManualPlan(
       {
         file: uploadedFile,
         access_token: session.access_token,

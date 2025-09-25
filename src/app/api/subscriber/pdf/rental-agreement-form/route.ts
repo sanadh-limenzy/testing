@@ -3,22 +3,6 @@ import { pdfService } from "@/lib/pdf-utils";
 import { deleteFileFromS3, uploadFileToS3 } from "@/lib/s3-utils";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rentalAgreementToHtml } from "@/html-to-pdf/rental-agreement-forms";
-export interface PDFOptions {
-  filename: string;
-  orientation?: "portrait" | "landscape";
-  paperSize?: "a4" | "letter" | "legal";
-  margins?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
-  };
-  printBackground?: boolean;
-  displayHeaderFooter?: boolean;
-  timeout?: number;
-  headerTemplate?: string;
-  footerTemplate?: string;
-}
 
 export const dynamic = "force-dynamic";
 
@@ -250,17 +234,6 @@ export async function POST(request: NextRequest) {
 
     const result = await pdfService.generatePDF(html, {
       filename: "rental-agreement",
-      orientation: "portrait",
-        paperSize: "a4",
-      margins: {
-        top: "0.5in",
-        right: "0.25in",
-        bottom: "0.5in",
-        left: "0.25in",
-      },
-      printBackground: true,
-      displayHeaderFooter: false,
-      timeout: 30000,
     });
     const s3Result = await uploadFileToS3(
       result.buffer,

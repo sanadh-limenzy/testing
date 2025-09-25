@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,13 @@ export default function ReimbursementPlanPage({
     isPending: isSwitchingToSystemGenerated,
   } = useResetReimbursementPlan();
 
-  const [url, setUrl] = useState(reimbursementPlanData?.signature_doc_url);
+  const [reimbursementPlan, setReimbursementPlan] = useState(
+    reimbursementPlanData
+  );
+
+  useEffect(() => {
+    setReimbursementPlan(reimbursementPlanData);
+  }, [reimbursementPlanData]);
 
   const handleGoBack = () => {
     router.back();
@@ -34,15 +40,24 @@ export default function ReimbursementPlanPage({
       return;
     }
 
-    await resetReimbursementPlan(
+    const { data } = await resetReimbursementPlan(
       { access_token: session.access_token },
       {
         onSuccess: (data) => {
-          setUrl(data.signature_doc_url);
+          setReimbursementPlan((prev) => ({
+            ...prev,
+            signature_doc_url: data.signature_doc_url,
+          }));
           setRefreshKey((prev) => prev + 1);
         },
       }
     );
+    setReimbursementPlan((prev) => ({
+      ...prev,
+      signature_doc_url: data.signature_doc_url,
+      is_manual_agreement: null,
+    }));
+    setRefreshKey((prev) => prev + 1);
   };
 
   return (
@@ -50,11 +65,11 @@ export default function ReimbursementPlanPage({
       <h2 className="text-2xl font-bold mb-4">Reimbursement Plan</h2>
 
       <div className="w-full max-w-6xl h-full overflow-hidden">
-        {reimbursementPlanData?.signature_doc_url &&
-          reimbursementPlanData?.signature_doc_url.length > 0 && (
+        {reimbursementPlan?.signature_doc_url &&
+          reimbursementPlan?.signature_doc_url.length > 0 && (
             <iframe
               key={refreshKey} // Force refresh when data changes
-              src={url || ""}
+              src={reimbursementPlan?.signature_doc_url || ""}
               width="100%"
               height="100%"
               className="w-full h-full"
@@ -69,7 +84,7 @@ export default function ReimbursementPlanPage({
           Go Back
         </Button>
 
-        {reimbursementPlanData?.is_manual_agreement ? (
+        {reimbursementPlan?.is_manual_agreement ? (
           <Button
             onClick={handleUseSystemGenerated}
             disabled={isSwitchingToSystemGenerated}
@@ -86,9 +101,9 @@ export default function ReimbursementPlanPage({
         ) : (
           <>
             <ReimbursementPlanSignature
-              proposal_id={reimbursementPlanData?.id}
+              proposal_id={reimbursementPlan?.id}
               business_address_id={
-                reimbursementPlanData?.business_address_id || ""
+                reimbursementPlan?.business_address_id || ""
               }
             />
             <ManualReimbursementPlanUpload />

@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
+export const revalidate = 0;
+
 export default async function Page() {
   const cookieStore = await cookies();
 
@@ -13,10 +15,6 @@ export default async function Page() {
       headers: {
         Cookie: cookieStore.toString(),
       },
-      // cache: "force-cache",
-      // next: {
-      //   tags: ["reimbursement-plan-page"],
-      // },
     }
   );
   const reimbursementPlanData = await response.json();

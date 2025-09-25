@@ -646,17 +646,6 @@ export async function PUT(
             // Generate PDF
             const result = await pdfService.generatePDF(html, {
               filename: "event-invoice",
-              orientation: "portrait",
-              paperSize: "a4",
-              margins: {
-                top: "0.5in",
-                right: "0.25in",
-                bottom: "0.5in",
-                left: "0.25in",
-              },
-              printBackground: true,
-              displayHeaderFooter: false,
-              timeout: 30000,
             });
 
             // Upload new PDF to S3

@@ -4,7 +4,7 @@ import { ProposalDatabase } from "@/@types";
 import { reimbursementPlanToHtml } from "@/html-to-pdf/reimbursement-plan";
 import { pdfService } from "@/lib/pdf-utils";
 import { uploadFileToS3 } from "@/lib/s3-utils";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 // import { DocuSignEmbeddedSigning } from "@/lib/e-sign";
 // import { env } from "@/env";
 // import { v4 as uuidv4 } from "uuid";
@@ -151,17 +151,6 @@ export async function GET(request: NextRequest) {
 
     const result = await pdfService.generatePDF(html, {
       filename: "reimbursement-plan",
-      orientation: "portrait",
-      paperSize: "a4",
-      margins: {
-        top: "0.5in",
-        right: "0.25in",
-        bottom: "0.5in",
-        left: "0.25in",
-      },
-      printBackground: true,
-      displayHeaderFooter: false,
-      timeout: 30000,
     });
 
     // Upload PDF to S3
@@ -251,8 +240,8 @@ export async function GET(request: NextRequest) {
     //     { status: 500 }
     //   );
     // }
-
     revalidateTag("reimbursement-plan-page");
+    revalidatePath("/subscriber/reimbursement-plan");
 
 
     return NextResponse.json({

@@ -116,7 +116,6 @@ export default function ReimbursementPlanSignature({
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setLocalSignature(result);
-        toast.success("Signature ready for submission!");
       };
 
       reader.readAsDataURL(file);
@@ -130,13 +129,13 @@ export default function ReimbursementPlanSignature({
     }
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!session?.access_token) {
       toast.error("Please log in to sign the document");
       return;
     }
 
-    signReimbursementPlan.mutate({
+    await signReimbursementPlan.mutateAsync({
       business_signature: localSignature,
       proposal_id: proposal_id,
       business_address_id: business_address_id,
