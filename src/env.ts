@@ -40,7 +40,6 @@ export const env = createEnv({
     NEXT_PUBLIC_RECAPTCHA_SITE_KEY: z.string().min(1),
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().min(1),
     NEXT_PUBLIC_APP_URL: z.string().min(1),
-    NEXT_PUBLIC_BACKEND_SITE: z.string().min(1),
   },
 
   /**
@@ -61,7 +60,6 @@ export const env = createEnv({
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_BACKEND_SITE: process.env.NEXT_PUBLIC_BACKEND_SITE,
     AIRDNA_BASE_URL_NEW: process.env.AIRDNA_BASE_URL_NEW,
     AIRDNA_CLIENT_TOKEN: process.env.AIRDNA_CLIENT_TOKEN,
     DOCUSIGN_USER_ID: process.env.DOCUSIGN_USER_ID,

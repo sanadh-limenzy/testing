@@ -15,7 +15,16 @@ import { env } from "@/env";
 type PDFOptions = {
   filename?: string;
   orientation?: "portrait" | "landscape";
-  paperSize?: "a4" | "a3" | "a2" | "a1" | "a0" | "letter" | "legal" | "tabloid" | "A4";
+  paperSize?:
+    | "a4"
+    | "a3"
+    | "a2"
+    | "a1"
+    | "a0"
+    | "letter"
+    | "legal"
+    | "tabloid"
+    | "A4";
   margins?: { top?: string; right?: string; bottom?: string; left?: string };
   printBackground?: boolean;
   displayHeaderFooter?: boolean;
@@ -33,8 +42,15 @@ class PDFService {
   constructor() {
     this.browser = null;
     this.isInitializing = false;
-    this.isProduction = env.NODE_ENV !== "development" && !env.NEXT_PUBLIC_BACKEND_SITE.includes("localhost");
+    this.isProduction =
+      env.NODE_ENV !== "development" &&
+      !env.NEXT_PUBLIC_APP_URL.includes("localhost");
     console.log("PDF Service: isProduction", this.isProduction);
+    console.log("PDF Service: env.NODE_ENV", env.NODE_ENV);
+    console.log(
+      "PDF Service: env.NEXT_PUBLIC_APP_URL",
+      env.NEXT_PUBLIC_APP_URL
+    );
   }
 
   async initBrowser() {
@@ -203,7 +219,7 @@ class PDFService {
       displayHeaderFooter: false,
       filename: "",
       orientation: "portrait",
-      paperSize:  this.isProduction ? "a4" : "A4",
+      paperSize: this.isProduction ? "a4" : "A4",
       margins: {
         top: "0.5in",
         right: "0.25in",
