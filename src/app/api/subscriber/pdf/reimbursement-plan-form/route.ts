@@ -1,16 +1,17 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ProposalDatabase } from "@/@types";
 import { reimbursementPlanToHtml } from "@/html-to-pdf/reimbursement-plan";
 import { pdfService } from "@/lib/pdf-utils";
 import { uploadFileToS3 } from "@/lib/s3-utils";
-import { DocuSignEmbeddedSigning } from "@/lib/e-sign";
-import { env } from "@/env";
-import { v4 as uuidv4 } from "uuid";
+import { revalidateTag } from "next/cache";
+// import { DocuSignEmbeddedSigning } from "@/lib/e-sign";
+// import { env } from "@/env";
+// import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -26,12 +27,51 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const business_address_id = searchParams.get("business_address_id");
+
+    let businessAddress = null;
+
+    const { data: businessAddressData, error: businessAddressError } =
+      await supabase
+        .from("user_addresses")
+        .select("*")
+        .eq("id", business_address_id)
+        .single();
+
+    if (businessAddressError) {
+      console.error("Error fetching business address:", businessAddressError);
+    } else {
+      businessAddress = businessAddressData;
+    }
+
+    if (!businessAddress) {
+      const { data: businessAddressData, error: businessAddressError } =
+        await supabase
+          .from("user_addresses")
+          .select("*")
+          .eq("created_by", user.id)
+          .eq("address_type", "business")
+          .eq("is_default", true)
+          .single();
+
+      if (businessAddressError) {
+        return NextResponse.json(
+          { error: "Failed to fetch business address", success: false },
+          { status: 500 }
+        );
+      } else {
+        businessAddress = businessAddressData;
+      }
+    }
+
     // Check if reimbursement plan already exists
     const { data: existingPlan, error: planError } = await supabase
       .from("proposals")
       .select("*")
       .eq("form_type", "Reimbursement_Plan")
       .eq("created_by", user.id)
+      .limit(1)
       .single();
 
     if (planError && planError.code !== "PGRST116") {
@@ -42,42 +82,69 @@ export async function GET() {
       );
     }
 
-    if (
-      existingPlan &&
-      existingPlan?.is_signature_done &&
-      existingPlan.signature_doc_url
-    ) {
-      // Return existing plan
+    if (existingPlan && existingPlan.signature_doc_url) {
+      // Return existing plan only if it has a signature_doc_url
       return NextResponse.json({
         success: true,
         data: existingPlan as ProposalDatabase,
       });
     }
 
-    const planData = {
-      form_type: "Reimbursement_Plan",
-      created_by: user.id,
-      is_manual_agreement: false,
-      is_signature_done: false,
-      is_business_signature_done: false,
-      is_mail_sent_to_business: false,
-      is_mail_sent_to_user: false,
-      signature_doc_url: "",
-      created_at: new Date().toISOString(),
-    };
+    // If no existing plan or existing plan has no signature_doc_url, create/update one
+    let proposal;
+    
+    if (existingPlan) {
+      // Update existing plan (reset case)
+      const { data: updatedProposal, error: updateError } = await supabase
+        .from("proposals")
+        .update({
+          is_manual_agreement: false,
+          is_signature_done: false,
+          is_business_signature_done: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingPlan.id)
+        .select()
+        .single();
 
-    const { data: proposal, error: createError } = await supabase
-      .from("proposals")
-      .insert(planData)
-      .select()
-      .single();
+      if (updateError) {
+        console.error("Error updating existing reimbursement plan:", updateError);
+        return NextResponse.json(
+          { error: "Failed to update reimbursement plan", success: false },
+          { status: 500 }
+        );
+      }
+      proposal = updatedProposal;
+    } else {
+      // Create new plan
+      const planData = {
+        form_type: "Reimbursement_Plan",
+        created_by: user.id,
+        is_manual_agreement: false,
+        is_signature_done: false,
+        is_business_signature_done: false,
+        is_mail_sent_to_business: false,
+        is_mail_sent_to_user: false,
+        signature_doc_url: "",
+        created_at: new Date().toISOString(),
+        business_address_id: businessAddress?.id,
+        year: new Date().getFullYear(),
+      };
 
-    if (createError) {
-      console.error("Error creating reimbursement plan:", createError);
-      return NextResponse.json(
-        { error: "Failed to create reimbursement plan", success: false },
-        { status: 500 }
-      );
+      const { data: newProposal, error: createError } = await supabase
+        .from("proposals")
+        .insert(planData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating reimbursement plan:", createError);
+        return NextResponse.json(
+          { error: "Failed to create reimbursement plan", success: false },
+          { status: 500 }
+        );
+      }
+      proposal = newProposal;
     }
 
     const html = reimbursementPlanToHtml();
@@ -129,60 +196,71 @@ export async function GET() {
       );
     }
 
-    // Generate return URL for DocuSign
-    const returnUrl = `${env.NEXT_PUBLIC_APP_URL}/subscriber/reimbursement-plan?docu-sign-success=true&proposalId=${proposal.id}`;
-
-    // Create DocuSign embedded signing request
-    const docusignRequest = {
-      documentBase64: result.buffer.toString("base64"),
-      documentName: `Reimbursement_Plan_${proposal.id}`,
-      recipientEmail: user.email || "", // You may need to get business email from user profile
-      recipientName: user.user_metadata?.full_name || user.email || "User",
-      returnUrl,
-      emailSubject: "Please sign your Reimbursement Plan",
-      emailBlurb: "Please review and sign your Reimbursement Plan document.",
-      signerClientUserId: uuidv4(),
-    };
-
-    // Initialize DocuSign embedded signing
-    const docusignService = new DocuSignEmbeddedSigning();
-    const signingResponse =
-      await docusignService.sendEnvelopeForEmbeddedSigning(docusignRequest);
-
-    console.log("signingResponse", signingResponse);
-
-    // Update proposal with envelope ID
-    const { error: envelopeUpdateError } = await supabase
-      .from("proposals")
+    const { error: userDataError } = await supabase
+      .from("subscriber_profile")
       .update({
-        envelope_id: signingResponse.envelopeId,
-        business_recipient_id: docusignRequest.signerClientUserId,
+        reimbursement_plan_id: proposal.id,
       })
-      .eq("id", proposal.id);
-
-    if (envelopeUpdateError) {
-      console.error(
-        "Error updating proposal with envelope ID:",
-        envelopeUpdateError
-      );
+      .eq("user_id", user.id)
+      .select("*")
+      .single();
+    if (userDataError) {
+      console.error("Error updating subscriber profile:", userDataError);
       return NextResponse.json(
-        { error: "Failed to update proposal with envelope ID", success: false },
+        { error: "Failed to update subscriber profile" },
         { status: 500 }
       );
     }
 
+    // Generate return URL for DocuSign
+    // const returnUrl = `${env.NEXT_PUBLIC_APP_URL}/subscriber/reimbursement-plan?docu-sign-success=true&proposalId=${proposal.id}`;
+
+    // Create DocuSign embedded signing request
+    // const docusignRequest = {
+    //   documentBase64: result.buffer.toString("base64"),
+    //   documentName: `Reimbursement_Plan_${proposal.id}`,
+    //   recipientEmail: user.email || "", // You may need to get business email from user profile
+    //   recipientName: user.user_metadata?.full_name || user.email || "User",
+    //   returnUrl,
+    //   emailSubject: "Please sign your Reimbursement Plan",
+    //   emailBlurb: "Please review and sign your Reimbursement Plan document.",
+    //   signerClientUserId: uuidv4(),
+    // };
+
+    // // Initialize DocuSign embedded signing
+    // const docusignService = new DocuSignEmbeddedSigning();
+    // const signingResponse =
+    //   await docusignService.sendEnvelopeForEmbeddedSigning(docusignRequest);
+
+    // // Update proposal with envelope ID
+    // const { error: envelopeUpdateError } = await supabase
+    //   .from("proposals")
+    //   .update({
+    //     envelope_id: signingResponse.envelopeId,
+    //     business_recipient_id: docusignRequest.signerClientUserId,
+    //   })
+    //   .eq("id", proposal.id);
+
+    // if (envelopeUpdateError) {
+    //   console.error(
+    //     "Error updating proposal with envelope ID:",
+    //     envelopeUpdateError
+    //   );
+    //   return NextResponse.json(
+    //     { error: "Failed to update proposal with envelope ID", success: false },
+    //     { status: 500 }
+    //   );
+    // }
+
+    revalidateTag("reimbursement-plan-page");
+
+
     return NextResponse.json({
       success: true,
       data: {
-        proposal: {
-          ...proposal,
-          envelope_id: signingResponse.envelopeId,
-          signature_doc_url: s3Result.url,
-        },
-        docusignData: {
-          envelopeId: signingResponse.envelopeId,
-          redirectUrl: signingResponse.url,
-        },
+        ...proposal,
+        // envelope_id: signingResponse.envelopeId,
+        signature_doc_url: s3Result.url,
       },
     });
   } catch (error) {

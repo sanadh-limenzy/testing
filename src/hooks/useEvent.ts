@@ -69,10 +69,15 @@ export function useUpdateEvent() {
     onSuccess: (data, variables) => {
       // Invalidate and refetch event data
       queryClient.invalidateQueries({ queryKey: ["event", variables.eventId] });
-
-      // Also invalidate related queries
+      queryClient.cancelQueries({ queryKey: ["event", variables.eventId] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.cancelQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["rental-property"] });
+      queryClient.cancelQueries({ queryKey: ["rental-property"] });
+      queryClient.invalidateQueries({
+        queryKey: ["events-from-rental-address"],
+      });
+      queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
     },
   });
 }
@@ -97,9 +102,14 @@ export function useDeleteEvent() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["rental-property"] });
+      queryClient.cancelQueries({ queryKey: ["events"] });
+      queryClient.cancelQueries({ queryKey: ["rental-property"] });
+      queryClient.invalidateQueries({
+        queryKey: ["events-from-rental-address"],
+      });
+      queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
     },
   });
 }
@@ -157,14 +167,14 @@ export function useCreateEvent() {
       }
     },
     onSuccess: (data) => {
-      // Invalidate and refetch events
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({
         queryKey: ["events-from-rental-address"],
       });
       queryClient.invalidateQueries({ queryKey: ["rental-property"] });
-
-      // Optionally, add the new event to the cache
+      queryClient.cancelQueries({ queryKey: ["events"] });
+      queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
+      queryClient.cancelQueries({ queryKey: ["rental-property"] });
       if (data.data) {
         queryClient.setQueryData(["event", data.data.id], {
           success: true,

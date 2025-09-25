@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { ProposalDatabase } from "@/@types";
+import Link from "next/link";
 
 export function ReimbursementPlanSection({
   alreadyHaveReimbursementPlan,
+  reimbursementPlan,
 }: {
   alreadyHaveReimbursementPlan: boolean;
   reimbursementPlan?: ProposalDatabase | null;
@@ -37,13 +39,16 @@ export function ReimbursementPlanSection({
             />
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center space-x-4 pt-4">
-            <Button className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2">
-              Upload
-            </Button>
-            <Button className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2">
-              View / update system generated
+            <Button
+              asChild
+              className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2"
+            >
+              <Link href="/subscriber/reimbursement-plan">
+                {reimbursementPlan?.is_signature_done
+                  ? "View / update signature"
+                  : "Sign or upload reimbursement plan"}
+              </Link>
             </Button>
           </div>
         </div>

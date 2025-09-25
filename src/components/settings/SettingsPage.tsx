@@ -4,7 +4,7 @@ import { EventTemplatesSection } from "./EventTemplatesSection";
 import { ReimbursementPlanSection } from "./ReimbursementPlanSection";
 
 export function SettingsPage() {
-  const { userData} = useUserData();
+  const { userData } = useUserData();
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -23,9 +23,7 @@ export function SettingsPage() {
             userData?.subscriberProfile?.is_already_have_reimbursement_plan ||
             false
           }
-          reimbursementPlan={
-            userData?.subscriberProfile?.reimbursement_plan
-          }
+          reimbursementPlan={userData?.subscriberProfile?.reimbursement_plan}
         />
       </div>
     </div>

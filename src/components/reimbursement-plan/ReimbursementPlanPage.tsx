@@ -2,93 +2,48 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useReimbursementPlan } from "@/hooks/useReimbursementPlan";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Loader2,
-  FileText,
-  Upload,
-} from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ReimbursementPlanSkeleton } from "@/components/skeletons/ReimbursementPlanSkeleton";
+import ReimbursementPlanSignature from "@/components/esign/reimbursement-plan-signature";
+import ManualReimbursementPlanUpload from "@/components/events/ManualReimbursementPlanUpload";
+import { useResetReimbursementPlan } from "@/hooks/useReimbursementPlan";
+import { useAuth } from "@/hooks/useAuth";
+import { ProposalDatabase } from "@/@types";
 
-export default function ReimbursementPlanPage() {
+export default function ReimbursementPlanPage({
+  reimbursementPlanData,
+}: {
+  reimbursementPlanData: ProposalDatabase;
+}) {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isSwitchingToSystemGenerated, setIsSwitchingToSystemGenerated] =
-    useState(false);
-
+  const { session } = useAuth();
   const {
-    data: reimbursementPlanData,
-    isLoading,
-    error,
-    refetch,
-  } = useReimbursementPlan();
+    mutateAsync: resetReimbursementPlan,
+    isPending: isSwitchingToSystemGenerated,
+  } = useResetReimbursementPlan();
 
-  // const handleUploadSuccess = () => {
-  //   refetch();
-  //   setRefreshKey((prev) => prev + 1);
-  //   router.push("/subscriber/home");
-  // };
+  const [url, setUrl] = useState(reimbursementPlanData?.signature_doc_url);
 
   const handleGoBack = () => {
     router.back();
   };
 
   const handleUseSystemGenerated = async () => {
-    setIsSwitchingToSystemGenerated(true);
-    try {
-      const response = await fetch(
-        "/api/subscriber/pdf/reimbursement-plan-form",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            use_system_generated: true,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        refetch();
-        setRefreshKey((prev) => prev + 1);
-      } else {
-        console.error("Failed to switch to system generated plan");
-      }
-    } catch (error) {
-      console.error("Error switching to system generated plan:", error);
-    } finally {
-      setIsSwitchingToSystemGenerated(false);
+    if (!session?.access_token) {
+      return;
     }
-  };
 
-  if (isLoading || isSwitchingToSystemGenerated) {
-    return <ReimbursementPlanSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen p-10">
-        <div className="flex items-center gap-2 text-red-600 mb-4">
-          <AlertCircle className="h-6 w-6" />
-          <span className="text-lg">Error loading reimbursement plan</span>
-        </div>
-        <p className="text-gray-600 mb-4">
-          {error.message || "An unexpected error occurred"}
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGoBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
-          <Button onClick={() => refetch()}>Try Again</Button>
-        </div>
-      </div>
+    await resetReimbursementPlan(
+      { access_token: session.access_token },
+      {
+        onSuccess: (data) => {
+          setUrl(data.signature_doc_url);
+          setRefreshKey((prev) => prev + 1);
+        },
+      }
     );
-  }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center h-screen p-10 mb-10">
@@ -99,7 +54,7 @@ export default function ReimbursementPlanPage() {
           reimbursementPlanData?.signature_doc_url.length > 0 && (
             <iframe
               key={refreshKey} // Force refresh when data changes
-              src={reimbursementPlanData?.signature_doc_url || ""}
+              src={url || ""}
               width="100%"
               height="100%"
               className="w-full h-full"
@@ -130,29 +85,13 @@ export default function ReimbursementPlanPage() {
           </Button>
         ) : (
           <>
-            {!reimbursementPlanData?.is_business_signature_done &&
-            !reimbursementPlanData?.is_signature_done ? (
-              <Button
-                onClick={() => {
-                  // Handle signature process
-                  console.log("Start signature process");
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Sign Document
-              </Button>
-            ) : null}
-            <Button
-              onClick={() => {
-                // Handle manual upload
-                console.log("Upload manual reimbursement plan");
-              }}
-              variant="outline"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Manual Plan
-            </Button>
+            <ReimbursementPlanSignature
+              proposal_id={reimbursementPlanData?.id}
+              business_address_id={
+                reimbursementPlanData?.business_address_id || ""
+              }
+            />
+            <ManualReimbursementPlanUpload />
           </>
         )}
       </div>
