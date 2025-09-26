@@ -190,7 +190,7 @@ export interface EventDatabaseWithAllData extends EventDatabase {
     digital_valuation: boolean;
     written_notes: boolean;
     evidence_supporting: boolean;
-  }[];
+  };
   event_documents: {
     id: string;
     name: string;
@@ -211,7 +211,7 @@ export interface EventDatabaseWithAllData extends EventDatabase {
     date: string;
     number: string;
     created_at: string;
-  }[];
+  };
   rental_address: UserAddress & {
     is_custom_plan: boolean;
     avarage_value: number;

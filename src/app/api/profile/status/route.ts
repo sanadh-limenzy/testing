@@ -41,7 +41,7 @@ export async function GET() {
       .from("user_profile")
       .select("*")
       .eq("id", user.id)
-      .limit(1);
+      .limit(1).single();
 
     if (userProfileError) {
       console.error("Error fetching user profile:", userProfileError);
@@ -51,14 +51,14 @@ export async function GET() {
       .from("subscriber_profile")
       .select("*")
       .eq("user_id", user.id)
-      .limit(1);
+      .limit(1).single();
 
     if (businessError) {
       console.error("Error fetching business info:", businessError);
     }
 
-    const hasUserProfile = (userProfileData?.length || 0) > 0;
-    const userType = userProfileData?.[0]?.user_type;
+    const hasUserProfile = userProfileData ? true : false;
+    const userType = userProfileData?.user_type;
 
     console.log(userType, "userProfileData");
 
@@ -84,7 +84,7 @@ export async function GET() {
       const hasBusinessAddress =
         userAddresses?.some((addr) => addr.address_type === "business") ||
         false;
-      const hasBusinessInfo = (businessData?.length || 0) > 0;
+      const hasBusinessInfo = businessData ? true : false;
 
       const isProfileComplete =
         hasUserProfile &&

@@ -105,20 +105,18 @@ const PreviewInvoice = ({
         <DialogHeader className="hidden">
           <DialogTitle>Preview Invoice</DialogTitle>
         </DialogHeader>
-        <iframe
-          src={
-            invoice_url ||
-            event?.data?.event_invoices?.[0]?.url ||
-            "https://augusta-rule-dev.s3.us-east-2.amazonaws.com/Rental_Event_Invoice_8LCIR86P"
-          }
-          style={{
-            width: "100%",
-            height: "100%",
-            border: "none",
-            backgroundColor: "#fff",
-          }}
-          title="Invoice PDF"
-        />
+        {invoice_url || event?.data?.event_invoices?.url ? (
+          <iframe
+            src={invoice_url || event?.data?.event_invoices?.url}
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+              backgroundColor: "#fff",
+            }}
+            title="Invoice PDF"
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
   );

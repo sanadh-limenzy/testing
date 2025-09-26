@@ -149,7 +149,6 @@ create index IF not exists idx_daily_amounts_date on public.daily_amounts using 
 
 create table public.defendability_scores (
   id uuid not null default gen_random_uuid (),
-  event_id uuid not null,
   written_notes boolean null default false,
   digital_valuation boolean null default false,
   evidence_supporting boolean null default false,
@@ -158,12 +157,8 @@ create table public.defendability_scores (
   more_duration boolean null default false,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
-  constraint defendability_scores_pkey primary key (id),
-  constraint fk_defendability_scores_event foreign KEY (event_id) references events (id) on delete CASCADE
+  constraint defendability_scores_pkey primary key (id)
 ) TABLESPACE pg_default;
-
-create index IF not exists idx_defendability_scores_event_id on public.defendability_scores using btree (event_id) TABLESPACE pg_default;
-
 
 
 create table public.event_documents (
@@ -184,18 +179,13 @@ create index IF not exists idx_event_documents_event_id on public.event_document
 
 create table public.event_invoices (
   id uuid not null default gen_random_uuid (),
-  event_id uuid not null,
   number character varying(255) null,
   url text null,
   date timestamp with time zone null,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
-  constraint event_invoices_pkey primary key (id),
-  constraint fk_event_invoices_event foreign KEY (event_id) references events (id) on delete CASCADE
+  constraint event_invoices_pkey primary key (id)
 ) TABLESPACE pg_default;
-
-create index IF not exists idx_event_invoices_event_id on public.event_invoices using btree (event_id) TABLESPACE pg_default;
-
 
 
 create table public.event_templates (
@@ -267,7 +257,6 @@ create table public.events (
   median_price_booked numeric(10, 2) null,
   price_percentile_90 numeric(10, 2) null,
   taxable_amount numeric(10, 2) null,
-  transaction_id character varying(255) null,
   is_tax_amount_paid boolean null default false,
   add_to_my_calendar boolean null default false,
   added_in_calendar boolean null default false,
@@ -281,15 +270,22 @@ create table public.events (
   business_address_id uuid null,
   is_draft boolean null default false,
   is_posted boolean null default false,
+  money_paid_to_personnel boolean null default false,
+  defendability_score_id uuid null,
+  event_invoice_id uuid null,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
+  transaction_id uuid null,
   constraint events_pkey primary key (id),
   constraint events_mongo_id_key unique (mongo_id),
-  constraint events_created_by_fkey foreign KEY (created_by) references user_profile (id) on delete set null,
-  constraint events_business_address_id_fkey foreign KEY (business_address_id) references user_addresses (id) on delete set null,
+  constraint events_defendability_score_id_fkey foreign KEY (defendability_score_id) references defendability_scores (id) on delete CASCADE,
+  constraint events_event_invoice_id_fkey foreign KEY (event_invoice_id) references event_invoices (id) on delete CASCADE,
   constraint events_promo_code_id_fkey foreign KEY (promo_code_id) references promo_codes (id) on delete set null,
   constraint events_rental_address_id_fkey foreign KEY (rental_address_id) references user_addresses (id) on delete set null,
-  constraint events_rental_agreement_id_fkey foreign KEY (rental_agreement_id) references proposals (id) on delete set null
+  constraint events_rental_agreement_id_fkey foreign KEY (rental_agreement_id) references proposals (id) on delete set null,
+  constraint events_business_address_id_fkey foreign KEY (business_address_id) references user_addresses (id) on delete set null,
+  constraint fk_events_transaction_id foreign KEY (transaction_id) references transactions (id) on delete set null,
+  constraint events_created_by_fkey foreign KEY (created_by) references user_profile (id) on delete set null
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_events_mongo_id on public.events using btree (mongo_id) TABLESPACE pg_default;
@@ -297,8 +293,6 @@ create index IF not exists idx_events_mongo_id on public.events using btree (mon
 create index IF not exists idx_events_created_by on public.events using btree (created_by) TABLESPACE pg_default;
 
 create index IF not exists idx_events_promo_code_id on public.events using btree (promo_code_id) TABLESPACE pg_default;
-
-create index IF not exists idx_events_transaction_id on public.events using btree (transaction_id) TABLESPACE pg_default;
 
 create index IF not exists idx_events_rental_agreement_id on public.events using btree (rental_agreement_id) TABLESPACE pg_default;
 
@@ -312,6 +306,13 @@ create index IF not exists idx_events_start_date on public.events using btree (s
 
 create index IF not exists idx_events_event_number on public.events using btree (event_number) TABLESPACE pg_default;
 
+create index IF not exists idx_events_money_paid_to_personnel on public.events using btree (money_paid_to_personnel) TABLESPACE pg_default;
+
+create index IF not exists idx_events_defendability_score_id on public.events using btree (defendability_score_id) TABLESPACE pg_default;
+
+create index IF not exists idx_events_event_invoice_id on public.events using btree (event_invoice_id) TABLESPACE pg_default;
+
+create index IF not exists idx_events_transaction_id on public.events using btree (transaction_id) TABLESPACE pg_default;
 
 
 create table public.plans (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -66,18 +67,23 @@ export async function POST(
     // Find the user's reimbursement plan proposal (there should only be one)
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select(`
+      .select(
+        `
         id, 
         event_id,
         form_type
-      `)
+      `
+      )
       .eq("created_by", user.id)
       .eq("form_type", "Reimbursement_Plan")
       .single();
 
     if (proposalError || !proposal) {
       return NextResponse.json(
-        { error: "Reimbursement plan not found or access denied", success: false },
+        {
+          error: "Reimbursement plan not found or access denied",
+          success: false,
+        },
         { status: 404 }
       );
     }
@@ -103,6 +109,26 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // Update the subscriber profile to set is_already_have_reimbursement_plan to true
+    const { error: profileUpdateError } = await supabase
+      .from("subscriber_profile")
+      .update({
+        is_already_have_reimbursement_plan: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id);
+
+    if (profileUpdateError) {
+      console.error("Error updating subscriber profile:", profileUpdateError);
+      // Don't fail the entire request if profile update fails, just log it
+      console.warn(
+        "Manual reimbursement plan uploaded but failed to update subscriber profile flag"
+      );
+    }
+
+    revalidatePath("/subscriber/settings");
+    revalidatePath("/subscriber/reimbursement-plan"); 
 
     return NextResponse.json({
       success: true,

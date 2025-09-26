@@ -150,3 +150,42 @@ export const useRentalAddresses = () => {
     },
   });
 };
+
+// Hook for updating home office deduction status
+export const useUpdateHomeOfficeDeduction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      addressId, 
+      isHomeOfficeDeduction 
+    }: { 
+      addressId: string; 
+      isHomeOfficeDeduction: boolean 
+    }) => {
+      const response = await fetch("/api/subscriber/address/home-office-deduction", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ addressId, isHomeOfficeDeduction }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update home office deduction status");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Home office deduction status updated successfully");
+      // Invalidate and refetch rental properties queries
+      queryClient.invalidateQueries({ queryKey: ["rental-properties"] });
+      queryClient.invalidateQueries({ queryKey: ["rental-addresses"] });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update home office deduction status");
+    },
+  });
+};

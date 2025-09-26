@@ -1,10 +1,22 @@
 "use client";
-import { useUserData } from "@/hooks/useUserData";
 import { EventTemplatesSection } from "./EventTemplatesSection";
 import { ReimbursementPlanSection } from "./ReimbursementPlanSection";
+import { HomeOfficeDeductionSection } from "./HomeOfficeDeductionSection";
+import { RentalAddress } from "@/@types/subscriber";
+import { ProposalDatabase, EventTemplateDatabase } from "@/@types";
 
-export function SettingsPage() {
-  const { userData } = useUserData();
+interface SettingsData {
+  rentalAddresses: RentalAddress[];
+  reimbursementPlan: ProposalDatabase | null;
+  alreadyHaveReimbursementPlan: boolean;
+  eventTemplates: EventTemplateDatabase[];
+}
+
+interface SettingsPageProps {
+  settingsData: SettingsData;
+}
+
+export function SettingsPage({ settingsData }: SettingsPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -15,16 +27,16 @@ export function SettingsPage() {
         </div>
 
         {/* Event Templates Section */}
-        <EventTemplatesSection />
+        <EventTemplatesSection eventTemplates={settingsData.eventTemplates} />
 
         {/* Reimbursement Plan Section */}
         <ReimbursementPlanSection
-          alreadyHaveReimbursementPlan={
-            userData?.subscriberProfile?.is_already_have_reimbursement_plan ||
-            false
-          }
-          reimbursementPlan={userData?.subscriberProfile?.reimbursement_plan}
+          alreadyHaveReimbursementPlan={settingsData.alreadyHaveReimbursementPlan}
+          reimbursementPlan={settingsData.reimbursementPlan}
         />
+
+        {/* Home Office Deduction Section */}
+        <HomeOfficeDeductionSection rentalAddresses={settingsData.rentalAddresses} />
       </div>
     </div>
   );

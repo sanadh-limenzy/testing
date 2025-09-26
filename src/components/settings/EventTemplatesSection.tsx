@@ -2,14 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Loader2, Trash2 } from "lucide-react";
-import {
-  useEventTemplates,
-  useDeleteEventTemplate,
-} from "@/hooks/useEventTemplates";
+import { Plus, Trash2 } from "lucide-react";
+import { useDeleteEventTemplate } from "@/hooks/useEventTemplates";
+import { EventTemplateDatabase } from "@/@types";
 
-export function EventTemplatesSection() {
-  const { data, isLoading, error } = useEventTemplates({ isTemplate: true });
+interface EventTemplatesSectionProps {
+  eventTemplates: EventTemplateDatabase[];
+}
+
+export function EventTemplatesSection({
+  eventTemplates,
+}: EventTemplatesSectionProps) {
   const deleteTemplateMutation = useDeleteEventTemplate();
 
   return (
@@ -43,20 +46,9 @@ export function EventTemplatesSection() {
         </div>
 
         {/* Content */}
-        {isLoading ? (
-          <div className="py-8 text-center">
-            <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-gray-600 mt-2">Loading event templates...</p>
-          </div>
-        ) : error ? (
-          <div className="py-8 text-center">
-            <p className="text-red-600">
-              Error loading templates: {error.message}
-            </p>
-          </div>
-        ) : data && data.data.length > 0 ? (
+        {eventTemplates && eventTemplates.length > 0 ? (
           <div className="space-y-3">
-            {data.data.map((template) => (
+            {eventTemplates.map((template) => (
               <div
                 key={template.id}
                 className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

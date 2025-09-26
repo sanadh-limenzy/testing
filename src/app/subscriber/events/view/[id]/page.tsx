@@ -52,17 +52,16 @@ export default function ViewEvent() {
     | undefined = undefined;
 
   if (eventData?.data) {
-    const defendabilityScores =
-      eventData?.data?.defendability_scores.length > 0
-        ? eventData?.data?.defendability_scores[0]
-        : {
-            written_notes: false,
-            digital_valuation: false,
-            evidence_supporting: false,
-            more_people: false,
-            money_paid_to_personnel: false,
-            more_duration: false,
-          };
+    const defendabilityScores = eventData?.data?.defendability_scores
+      ? eventData?.data?.defendability_scores
+      : {
+          written_notes: false,
+          digital_valuation: false,
+          evidence_supporting: false,
+          more_people: false,
+          money_paid_to_personnel: false,
+          more_duration: false,
+        };
     initialData = {
       title: eventData?.data?.title,
       start_date: eventData?.data?.start_date,

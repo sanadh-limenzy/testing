@@ -217,6 +217,36 @@ export async function POST(
       ? (existingEvents[0].event_number || 0) + 1
       : 1;
 
+    // Create defendability scores record first
+    const peopleCount = eventData.people_count
+      ? parseInt(eventData.people_count.toString())
+      : 0;
+    const defendabilityData = {
+      written_notes: !!(eventData.title && eventData.description),
+      digital_valuation: !eventData.manual_valuation,
+      evidence_supporting:
+        (eventData.manual_valuation &&
+          eventData.event_documents &&
+          eventData.event_documents.length > 0) ||
+        false,
+      more_people: peopleCount >= 3,
+      money_paid_to_personnel: eventData.money_paid_to_personal || false,
+      more_duration: duration >= 4.5,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: createdDefendabilityScore, error: defendabilityError } = await supabase
+      .from("defendability_scores")
+      .insert(defendabilityData)
+      .select("id")
+      .single();
+
+    if (defendabilityError) {
+      console.error("Error creating defendability scores:", defendabilityError);
+      // Don't fail the entire request for this
+    }
+
     // Prepare event data for insertion
     const insertData = {
       created_by: user.id,
@@ -232,6 +262,7 @@ export async function POST(
             .filter((name) => name && name.trim() !== "")
         : [],
       excluded_areas: eventData.excluded_areas || "",
+      date: eventData.start_date || new Date().toISOString(), // Set date field
       start_date: eventData.start_date || "",
       end_date: eventData.end_date || "",
       start_time: eventData.start_time || "",
@@ -247,6 +278,7 @@ export async function POST(
       rental_address_id: eventData.residence,
       business_address_id: eventData.business_address_id,
       money_paid_to_personnel: eventData.money_paid_to_personal || false,
+      defendability_score_id: createdDefendabilityScore?.id || null, // Link to defendability score
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -265,35 +297,6 @@ export async function POST(
         { error: "Failed to create event", success: false },
         { status: 500 }
       );
-    }
-
-    // Create defendability scores record
-    const peopleCount = eventData.people_count
-      ? parseInt(eventData.people_count.toString())
-      : 0;
-    const defendabilityData = {
-      event_id: createdEvent.id,
-      written_notes: !!(eventData.title && eventData.description),
-      digital_valuation: !eventData.manual_valuation,
-      evidence_supporting:
-        (eventData.manual_valuation &&
-          eventData.event_documents &&
-          eventData.event_documents.length > 0) ||
-        false,
-      more_people: peopleCount >= 3,
-      money_paid_to_personnel: eventData.money_paid_to_personal || false,
-      more_duration: duration >= 4.5,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: defendabilityError } = await supabase
-      .from("defendability_scores")
-      .insert(defendabilityData);
-
-    if (defendabilityError) {
-      console.error("Error creating defendability scores:", defendabilityError);
-      // Don't fail the entire request for this
     }
 
     // Handle document insertion if provided
@@ -382,7 +385,6 @@ export async function POST(
       const { data: eventInvoice, error: invoiceError } = await supabase
         .from("event_invoices")
         .insert({
-          event_id: createdEvent.id,
           number: invoiceNumber,
           url: s3Result.url,
           date: invoiceDate,
@@ -395,6 +397,16 @@ export async function POST(
         // Don't fail the entire request, just log the error
       } else {
         console.log("Event invoice created successfully:", eventInvoice);
+        
+        // Update the event with the invoice ID
+        const { error: updateEventError } = await supabase
+          .from("events")
+          .update({ event_invoice_id: eventInvoice.id })
+          .eq("id", createdEvent.id);
+
+        if (updateEventError) {
+          console.error("Failed to link invoice to event:", updateEventError);
+        }
       }
     }
 

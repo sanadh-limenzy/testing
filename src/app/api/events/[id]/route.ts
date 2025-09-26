@@ -747,7 +747,7 @@ export async function DELETE(
     // First, get the event to verify ownership
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, created_by, rental_agreement_id, thumbnails")
+      .select("id, created_by, rental_agreement_id, event_invoice_id, thumbnails")
       .eq("id", id)
       .eq("created_by", user.id)
       .single();
@@ -765,7 +765,13 @@ export async function DELETE(
     const [eventDocsResult, eventInvoicesResult, proposalResult] =
       await Promise.all([
         supabase.from("event_documents").select("id, url").eq("event_id", id),
-        supabase.from("event_invoices").select("id, url").eq("event_id", id),
+        event.event_invoice_id
+          ? supabase
+              .from("event_invoices")
+              .select("id, url")
+              .eq("id", event.event_invoice_id)
+              .single()
+          : Promise.resolve({ data: null, error: null }),
         event.rental_agreement_id
           ? supabase
               .from("proposals")
@@ -776,15 +782,17 @@ export async function DELETE(
       ]);
 
     const eventDocuments = eventDocsResult.data || [];
-    const eventInvoices = eventInvoicesResult.data || [];
+    const eventInvoices = eventInvoicesResult.data ? [eventInvoicesResult.data] : [];
     const proposal = proposalResult.data;
 
     // Delete related records that don't have CASCADE delete
     // 1. Delete event invoices
-    const { error: invoiceDeleteError } = await supabase
-      .from("event_invoices")
-      .delete()
-      .eq("event_id", id);
+    const { error: invoiceDeleteError } = event.event_invoice_id
+      ? await supabase
+          .from("event_invoices")
+          .delete()
+          .eq("id", event.event_invoice_id)
+      : { error: null };
 
     if (invoiceDeleteError) {
       console.error("Error fetching event:", eventError);

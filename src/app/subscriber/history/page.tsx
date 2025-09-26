@@ -358,8 +358,7 @@ function EventCard({
     description: event.description || "",
     peopleCount: event.people_count || 0,
     duration: meetsMinimumDuration(event.start_time, event.end_time, 4.5),
-    digitalValuation:
-      event.defendability_scores?.[0]?.digital_valuation || false,
+    digitalValuation: event.defendability_scores?.digital_valuation || false,
     moneyPaidToPersonnel: event.money_paid_to_personal || false,
     evidenceSupporting: (event.event_documents?.length || 0) > 0,
   };
@@ -565,7 +564,7 @@ function EventCard({
                   variant="outline"
                   className="text-xs bg-orange-50 text-orange-700 border-orange-200"
                 >
-                  {event.defendability_scores?.[0]?.digital_valuation
+                  {event.defendability_scores?.digital_valuation
                     ? "Digital"
                     : "Manual"}
                 </Badge>

@@ -20,6 +20,8 @@ export const LoginForm: React.FC = () => {
   const router = useRouter();
   const validationSchema = signinFormSchema;
 
+  const [isForrgotPasswordSubmitting, setIsForrgotPasswordSubmitting] = React.useState(false);
+
   const {
     register,
     handleSubmit,
@@ -75,6 +77,7 @@ export const LoginForm: React.FC = () => {
     clearErrors();
 
     try {
+      setIsForrgotPasswordSubmitting(true);
       const result = await resetPassword(watchedEmail);
       if (result.error) {
         const errorMessage =
@@ -101,6 +104,8 @@ export const LoginForm: React.FC = () => {
       setError("root", {
         message: "Failed to send reset email. Please try again.",
       });
+    } finally {
+      setIsForrgotPasswordSubmitting(false);
     }
   };
 
@@ -191,10 +196,10 @@ export const LoginForm: React.FC = () => {
           type="button"
           variant="link"
           onClick={handleForgotPassword}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isForrgotPasswordSubmitting}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Forgot Password?
+          {isForrgotPasswordSubmitting ? "Sending reset email..." : "Forgot Password?"}
         </Button>
       </div>
     </form>
