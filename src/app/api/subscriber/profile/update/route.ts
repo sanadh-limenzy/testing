@@ -78,7 +78,6 @@ export async function PUT(request: NextRequest) {
       .update({
         first_name: validatedData.firstName,
         last_name: validatedData.lastName,
-        email: validatedData.email,
         phone_code: validatedData.phoneCode || null,
         phone: validatedData.phone || null,
         street: validatedData.street || null,
@@ -114,6 +113,19 @@ export async function PUT(request: NextRequest) {
         { error: "Failed to update subscriber profile" },
         { status: 500 }
       );
+    }
+
+    console.log("Updating user metadata");
+    const { error: authUpdateError } = await supabase.auth.updateUser({
+      data: {
+        first_name: validatedData.firstName,
+        last_name: validatedData.lastName,
+      },
+    });
+
+    if (authUpdateError) {
+      console.error("Error updating user metadata:", authUpdateError);
+      // Don't fail the entire request for auth metadata update errors
     }
 
     return NextResponse.json({
