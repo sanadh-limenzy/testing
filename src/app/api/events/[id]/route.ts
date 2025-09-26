@@ -185,7 +185,7 @@ export async function PUT(
     // First, verify the event exists and belongs to the user
     const { data: existingEvent, error: fetchError } = await supabase
       .from("events")
-      .select("id, created_by, duration, thumbnails")
+      .select("id, created_by, duration, thumbnails, defendability_score_id, event_invoice_id")
       .eq("id", id)
       .eq("created_by", user.id)
       .single();
@@ -345,17 +345,21 @@ export async function PUT(
         defendabilityUpdate.digital_valuation = !eventData.manual_valuation;
       }
 
-      const { error: defendabilityError } = await supabase
-        .from("defendability_scores")
-        .update(defendabilityUpdate)
-        .eq("event_id", id);
+      if (existingEvent.defendability_score_id) {
+        const { error: defendabilityError } = await supabase
+          .from("defendability_scores")
+          .update(defendabilityUpdate)
+          .eq("id", existingEvent.defendability_score_id);
 
-      if (defendabilityError) {
-        console.error(
-          "Error updating defendability scores:",
-          defendabilityError
-        );
-        // Don't fail the entire request for this
+        if (defendabilityError) {
+          console.error(
+            "Error updating defendability scores:",
+            defendabilityError
+          );
+          // Don't fail the entire request for this
+        }
+      } else {
+        console.log("No defendability_score_id found for event, skipping defendability scores update");
       }
     }
 
@@ -613,14 +617,17 @@ export async function PUT(
           }
 
           // Get existing invoice to update
-          const { data: existingInvoice, error: invoiceError } = await supabase
-            .from("event_invoices")
-            .select("*")
-            .eq("event_id", id)
-            .single();
+          const { data: existingInvoice, error: invoiceError } = existingEvent.event_invoice_id
+            ? await supabase
+                .from("event_invoices")
+                .select("*")
+                .eq("id", existingEvent.event_invoice_id)
+                .single()
+            : { data: null, error: null };
 
           if (invoiceError || !existingInvoice) {
             console.error("Error fetching existing invoice:", invoiceError);
+            console.log("No existing invoice found, skipping invoice recreation");
           } else {
             // Generate new invoice number and date
             const invoiceNumber = generateRandomString({
@@ -747,7 +754,7 @@ export async function DELETE(
     // First, get the event to verify ownership
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, created_by, rental_agreement_id, event_invoice_id, thumbnails")
+      .select("id, created_by, rental_agreement_id, event_invoice_id, defendability_score_id, thumbnails")
       .eq("id", id)
       .eq("created_by", user.id)
       .single();
@@ -820,10 +827,12 @@ export async function DELETE(
     }
 
     // 4. Delete defendability scores
-    const { error: defendabilityDeleteError } = await supabase
-      .from("defendability_scores")
-      .delete()
-      .eq("event_id", id);
+    const { error: defendabilityDeleteError } = event.defendability_score_id
+      ? await supabase
+          .from("defendability_scores")
+          .delete()
+          .eq("id", event.defendability_score_id)
+      : { error: null };
 
     if (defendabilityDeleteError) {
       console.error(
