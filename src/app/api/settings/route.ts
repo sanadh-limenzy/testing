@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { RentalAddress } from "@/@types/subscriber";
-import { EventTemplateDatabase, ProposalDatabase } from "@/@types";
+import {
+  EventTemplateDatabase,
+  ProposalDatabase,
+  UserNotificationSettings,
+  PlanDatabase,
+} from "@/@types";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +15,9 @@ interface SettingsData {
   reimbursementPlan: ProposalDatabase | null;
   alreadyHaveReimbursementPlan: boolean;
   eventTemplates: EventTemplateDatabase[];
+  notificationSettings: UserNotificationSettings | null;
+  plans: PlanDatabase[];
+  currentPlan: string | null;
 }
 
 export async function GET() {
@@ -22,10 +30,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error(
-        "[GET /api/settings] Authentication error:",
-        authError
-      );
+      console.error("[GET /api/settings] Authentication error:", authError);
       return NextResponse.json(
         { error: "User not authenticated" },
         { status: 401 }
@@ -35,13 +40,16 @@ export async function GET() {
     // Fetch user profile with subscriber profile
     const { data: userProfile, error: profileError } = await supabase
       .from("user_profile")
-      .select(`
+      .select(
+        `
         *,
         subscriber_profile (
           is_already_have_reimbursement_plan,
-          reimbursement_plan
+          reimbursement_plan,
+          plan_id
         )
-      `)
+      `
+      )
       .eq("id", user.id)
       .single();
 
@@ -113,22 +121,51 @@ export async function GET() {
       }
     }
 
+    // Fetch notification settings
+    const { data: notificationSettings, error: notificationError } =
+      await supabase
+        .from("user_notification_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+    if (notificationError) {
+      console.error(
+        "[GET /api/settings] Error fetching notification settings:",
+        notificationError
+      );
+    }
+
+    // Fetch plans
+    const { data: plans, error: plansError } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("is_active", true);
+
+    if (plansError) {
+      console.error("[GET /api/settings] Error fetching plans:", plansError);
+    }
+
     const settingsData: SettingsData = {
       rentalAddresses: rentalAddresses || [],
       reimbursementPlan,
-      alreadyHaveReimbursementPlan: userProfile.subscriber_profile?.is_already_have_reimbursement_plan || false,
+      alreadyHaveReimbursementPlan:
+        userProfile.subscriber_profile?.is_already_have_reimbursement_plan ||
+        false,
       eventTemplates: eventTemplates || [],
+      notificationSettings: notificationSettings || null,
+      plans: plans || [],
+      currentPlan: userProfile.subscriber_profile?.plan_id || null,
     };
+
+    console.log(Object.keys(settingsData), "settingsData");
 
     return NextResponse.json({
       success: true,
       data: settingsData,
     });
   } catch (error) {
-    console.error(
-      "[GET /api/settings] Unexpected error:",
-      error
-    );
+    console.error("[GET /api/settings] Unexpected error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

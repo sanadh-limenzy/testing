@@ -4,7 +4,7 @@ import React, { createContext, useContext, ReactNode } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { EventFormData } from "@/@types/validation";
 import { EventFormContextType } from "@/@types/event-form";
-import { FutureDailyPricingDay } from "@/@types/index";
+import { FutureDailyPricingDay, EventDatabase } from "@/@types/index";
 import { UserAddress } from "@/@types/index";
 import { DateRange } from "react-day-picker";
 export interface EventFormContextValue extends EventFormContextType {
@@ -31,6 +31,8 @@ export interface EventFormContextValue extends EventFormContextType {
   setClearTrigger: (clearTrigger: boolean) => void;
   datePrices: FutureDailyPricingDay[];
   rentalAddresses: UserAddress[];
+  eventsFromRentalAddress?: EventDatabase[];
+  eventId?: string;
 }
 
 const EventFormContext = createContext<EventFormContextValue | undefined>(

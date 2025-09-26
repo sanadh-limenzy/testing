@@ -224,7 +224,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { open } = useSidebar();
 
   const userType = user?.user_metadata.user_type;
-  console.log(userType);
 
   const userRole = userType as "Admin" | "Accountant" | "Subscriber";
   const navigationData = getNavigationData(userRole);

@@ -314,3 +314,28 @@ export interface EventTemplateDatabase {
   created_at?: string | null; // ISO timestamp with timezone
   updated_at?: string | null; // ISO timestamp with timezone
 }
+
+export interface UserNotificationSettings {
+  id: string;
+  user_id: string;
+  pre_event_email_notifications?: boolean | null;
+  during_event_email_notifications?: boolean | null;
+  post_event_email_notifications?: boolean | null;
+  high_upcoming_rental_event_price?: boolean | null;
+  using_the_app_tax_pro?: boolean | null;
+  tax_code_questions?: boolean | null;
+  annual_filing?: boolean | null;
+  best_practices_posts?: boolean | null;
+  money_savings_posts?: boolean | null;
+  tax_law_posts?: boolean | null;
+  time_savings_posts?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface UserNotificationCategory {
+  id: string;
+  user_id: string;
+  category_id?: string | null;
+  created_at?: string | null;
+}

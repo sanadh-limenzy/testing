@@ -55,7 +55,7 @@ export interface UserData {
  * - Uses React Query for caching and background updates
  * - Query key: `["user-data"]`
  */
-export const useUserData = () => {
+export const useUserData = (enabled: boolean = true) => {
   const { user } = useAuth();
   const query = useQuery<UserData>({
     queryKey: ["user-data"],
@@ -63,7 +63,7 @@ export const useUserData = () => {
       const response = await fetch("/api/user_data");
       return response.json();
     },
-    enabled: !!user,
+    enabled: !!user && enabled,
     retry: (failureCount, error) => {
       if (error?.message?.includes("User not authenticated")) {
         return false;

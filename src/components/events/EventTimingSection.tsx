@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -8,16 +9,17 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { InfoIcon, Clock } from "lucide-react";
+import { InfoIcon, Clock, AlertCircle } from "lucide-react";
 import { useEventForm } from "@/contexts/EventFormContext";
 import { PriceCalendar } from "./pricing-calendar";
 import { DateRange } from "react-day-picker";
 import { differenceInDays, eachDayOfInterval, format } from "date-fns";
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { EventDatabase } from "@/@types/index";
 
 export function EventTimingSection() {
-  const { form, disabledDates, isReadOnly, isEditMode, property, datePrices } =
+  const { form, disabledDates, isReadOnly, isEditMode, property, datePrices, eventsFromRentalAddress, eventId } =
     useEventForm();
   const {
     register,
@@ -26,6 +28,24 @@ export function EventTimingSection() {
     setValue,
   } = form;
   const watchedValues = watch();
+
+  // Calculate if the selected dates exceed the 14-day limit
+  const exceeds14DayLimit = React.useMemo(() => {
+    if (!watchedValues.start_date || !watchedValues.end_date || isEditMode) return false;
+    
+    const eventsFromRentalAddressWithoutTheCurrentEvent = eventsFromRentalAddress?.filter((event) => event.id !== eventId);
+    
+    const pastEventDays = eventsFromRentalAddressWithoutTheCurrentEvent?.reduce((acc: number, event: EventDatabase) => {
+      return event.start_date && event.end_date
+        ? acc + (differenceInDays(new Date(event.end_date), new Date(event.start_date)) + 1)
+        : acc;
+    }, 0) || 0;
+    
+    const newEventDays = differenceInDays(new Date(watchedValues.end_date), new Date(watchedValues.start_date)) + 1;
+    const totalDaysUsed = pastEventDays + newEventDays;
+    
+    return totalDaysUsed > 14;
+  }, [watchedValues.start_date, watchedValues.end_date, eventsFromRentalAddress, eventId, isEditMode]);
 
   const getPriceForDate = useCallback(
     (date: Date) => {
@@ -168,6 +188,20 @@ export function EventTimingSection() {
           readOnly={isReadOnly || isEditMode}
           getPriceForDate={getPriceForDate}
         />
+        
+        {/* 14-day limit validation error */}
+        {exceeds14DayLimit && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700">
+              <p className="font-medium">Event duration exceeds annual limit</p>
+              <p className="mt-1">
+                This event would exceed the 14-day annual limit for this rental property. 
+                Please reduce the event duration or choose different dates.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Start and End Time */}

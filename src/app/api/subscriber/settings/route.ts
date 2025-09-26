@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { RentalAddress } from "@/@types/subscriber";
-import { ProposalDatabase, EventTemplateDatabase } from "@/@types";
+import {
+  ProposalDatabase,
+  EventTemplateDatabase,
+  UserNotificationSettings,
+  PlanDatabase,
+} from "@/@types";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +15,10 @@ interface SettingsData {
   reimbursementPlan: ProposalDatabase | null;
   alreadyHaveReimbursementPlan: boolean;
   eventTemplates: EventTemplateDatabase[];
+  notificationSettings: UserNotificationSettings | null;
+  plans: PlanDatabase[];
+  currentPlan: string | null;
+  isAutoRenewSubscription: boolean;
 }
 
 export async function GET() {
@@ -40,7 +49,9 @@ export async function GET() {
         *,
         subscriber_profile (
           is_already_have_reimbursement_plan,
-          reimbursement_plan: reimbursement_plan_id (*)
+          reimbursement_plan: reimbursement_plan_id (*),
+          plan_id,
+          is_auto_renew_subscription
         )
       `
       )
@@ -113,6 +124,35 @@ export async function GET() {
       }
     }
 
+    // Fetch notification settings
+    const { data: notificationSettings, error: notificationError } =
+      await supabase
+        .from("user_notification_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+    if (notificationError && notificationError.code !== "PGRST116") {
+      console.error(
+        "[GET /api/subscriber/settings] Error fetching notification settings:",
+        notificationError
+      );
+    }
+
+    // Fetch plans
+    const { data: plans, error: plansError } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+
+    if (plansError) {
+      console.error(
+        "[GET /api/subscriber/settings] Error fetching plans:",
+        plansError
+      );
+    }
+
     const settingsData: SettingsData = {
       rentalAddresses: rentalAddresses || [],
       reimbursementPlan,
@@ -120,6 +160,10 @@ export async function GET() {
         userProfile.subscriber_profile?.is_already_have_reimbursement_plan ||
         false,
       eventTemplates: eventTemplates || [],
+      notificationSettings: notificationSettings || null,
+      plans: plans || [],
+      currentPlan: userProfile.subscriber_profile?.plan_id || null,
+      isAutoRenewSubscription: userProfile.subscriber_profile?.is_auto_renew_subscription || false,
     };
 
     return NextResponse.json({

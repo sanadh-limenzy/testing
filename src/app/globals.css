@@ -116,8 +116,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+  --font-sans: var(--font-roboto), Roboto, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
@@ -172,8 +172,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.275 0 0);
   --sidebar-ring: oklch(0.439 0 0);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+  --font-sans: var(--font-roboto), Roboto, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
@@ -252,6 +252,50 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Font family utilities */
+  .font-roboto {
+    font-family: var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  
+  .font-figtree {
+    font-family: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  
+  .font-paprika {
+    font-family: var(--font-paprika), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  
+  .font-eb-garamond {
+    font-family: var(--font-eb-garamond), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+  
+  /* Custom font utilities for your local fonts */
+  .font-best-signature {
+    font-family: "Best Signature Font", cursive;
+  }
+  
+  .font-betmo {
+    font-family: "Betmo", cursive;
+  }
+  
+  .font-pattheda {
+    font-family: "Pattheda", cursive;
+  }
+  
+  .font-roger-heart {
+    font-family: "Roger Heart", cursive;
+  }
+  
+  .font-saint-hilton {
+    font-family: "Saint Hilton", cursive;
+  }
+  
+  .font-unicorn-confetti {
+    font-family: "Unicorn Confetti", cursive;
   }
 }
 

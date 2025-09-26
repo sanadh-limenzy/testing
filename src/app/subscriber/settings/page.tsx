@@ -1,6 +1,6 @@
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { RentalAddress } from "@/@types/subscriber";
-import { ProposalDatabase, EventTemplateDatabase } from "@/@types";
+import { ProposalDatabase, EventTemplateDatabase, UserNotificationSettings, PlanDatabase } from "@/@types";
 import { cookies } from "next/headers";
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
@@ -9,6 +9,10 @@ interface SettingsData {
   reimbursementPlan: ProposalDatabase | null;
   alreadyHaveReimbursementPlan: boolean;
   eventTemplates: EventTemplateDatabase[];
+  notificationSettings: UserNotificationSettings | null;
+  plans: PlanDatabase[];
+  currentPlan: string | null;
+  isAutoRenewSubscription: boolean;
 }
 
 async function getSettingsData(cookieStore: ReadonlyRequestCookies): Promise<SettingsData> {
@@ -34,6 +38,10 @@ async function getSettingsData(cookieStore: ReadonlyRequestCookies): Promise<Set
       reimbursementPlan: null,
       alreadyHaveReimbursementPlan: false,
       eventTemplates: [],
+      notificationSettings: null,
+      plans: [],
+      currentPlan: null,
+      isAutoRenewSubscription: false,
     };
   }
 }
@@ -41,6 +49,6 @@ async function getSettingsData(cookieStore: ReadonlyRequestCookies): Promise<Set
 export default async function Settings() {
   const cookieStore = await cookies();
   const settingsData = await getSettingsData(cookieStore);
-  
+
   return <SettingsPage settingsData={settingsData} />;
 }

@@ -33,8 +33,6 @@ export default function ProtectedRoute({ children }: Props) {
     return <>{children}</>;
   }
 
-  console.log(user, "user");
-
   return (
     <SidebarProvider>
       <AppSidebar />

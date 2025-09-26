@@ -240,8 +240,6 @@ export function EventForm({
       })
       .reduce((acc, curr) => acc + curr, 0);
 
-    console.log({ pastEventDays });
-
     if (isCreateMode) {
       return pastEventDays;
     }
@@ -264,6 +262,21 @@ export function EventForm({
     startDate,
     endDate,
   ]);
+
+  // Check if total event days exceed 14-day limit
+  const exceeds14DayLimit = React.useMemo(() => {
+    if (!startDate || !endDate || isEditMode) return false;
+    
+    const newEventDays = differenceInDays(new Date(endDate), new Date(startDate)) + 1;
+    const totalDaysUsed = number_of_event_days_used + newEventDays;
+    
+    return totalDaysUsed > 14;
+  }, [startDate, endDate, number_of_event_days_used, isEditMode]);
+
+  // Update form validity to include 14-day limit check
+  const isFormValidWithLimit = React.useMemo(() => {
+    return isFormValid && !exceeds14DayLimit;
+  }, [isFormValid, exceeds14DayLimit]);
 
   const taxSavingsData = React.useMemo(() => {
     const pastDeductions =
@@ -544,6 +557,8 @@ export function EventForm({
       setClearTrigger,
       datePrices: datePrices || [],
       rentalAddresses: rentalAddresses || [],
+      eventsFromRentalAddress,
+      eventId,
     }),
     [
       mode,
@@ -559,6 +574,8 @@ export function EventForm({
       setClearTrigger,
       datePrices,
       rentalAddresses,
+      eventsFromRentalAddress,
+      eventId,
     ]
   );
 
@@ -618,7 +635,7 @@ export function EventForm({
                 <EventAreasSection property={property!} />
                 <EventPhotosSection />
                 <EventFormActions
-                  isValid={isFormValid}
+                  isValid={isFormValidWithLimit}
                   onSubmit={form.handleSubmit(handleSubmit)}
                   eventId={eventId}
                 />
