@@ -1,8 +1,18 @@
 import { format, differenceInDays } from "date-fns";
 import * as converter from "json-2-csv";
-import { EventDatabaseWithAllData } from "@/@types";
+import { 
+  EventDatabaseWithAllData,
+  TaxPacketData,
+  TaxPacketSaveData,
+  TaxPacketPDFResult,
+  CalculatedTaxDeductions,
+  Comp,
+  AirDNAListing,
+  MarketCode,
+  ProposalDatabase
+} from "@/@types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import airdnaUtils, { AirDNAListing, Comp } from "@/lib/airdna-utils";
+import airdnaUtils from "@/lib/airdna-utils";
 import { uploadFileToS3 } from "@/lib/s3-utils";
 import { pdfService } from "@/lib/pdf-utils";
 
@@ -10,10 +20,7 @@ const formatDate = (dateString: string) => {
   return format(new Date(dateString), "MMM d, yyyy");
 };
 
-interface TaxDeductions {
-  totalDeduction: number;
-  potentialSavings: number;
-}
+// Remove this interface as it's now defined in @types/index.ts
 
 const formatAddressInSingleText = (address: {
   street?: string;
@@ -206,13 +213,7 @@ function findClosestProperty(
   return { bestMatch: airdnaListings[0], score: highestScore };
 }
 
-type CalculatedTaxDeductions = {
-  totalDeduction?: number;
-  totalTaxableAmount?: number;
-  potentialSavings?: number;
-  daysUsed?: number;
-  daysRemaining?: number;
-};
+// Remove this type as it's now defined in @types/index.ts
 
 function calculateTaxDeductions(
   events: EventDatabaseWithAllData[]
@@ -250,16 +251,7 @@ function calculateTaxDeductions(
   };
 }
 
-type TaxPacketData = {
-  taxYear: number;
-  userName: string;
-  totalEvents: number;
-  taxDeductions: CalculatedTaxDeductions;
-  csvLink: string;
-  reimbursementPlan: string;
-  eventsArray: EventDatabaseWithAllData & { comps_list: Comp[] }[];
-  isAlreadyHaveReimbursementPlan: boolean;
-};
+// Remove this type as it's now defined in @types/index.ts
 
 /**
  * Generate tax packet data
@@ -273,9 +265,7 @@ export async function generateTaxPacketData(
   userId: string,
   taxYear: number,
   events: EventDatabaseWithAllData[],
-  reimbursementPlan: {
-    signatureDocUrl: string;
-  },
+  reimbursementPlan: ProposalDatabase,
   isAlreadyHaveReimbursementPlan = false
 ): Promise<TaxPacketData | undefined> {
   const supabase = await createServerSupabaseClient();
@@ -298,7 +288,7 @@ export async function generateTaxPacketData(
     events.map(async (event) => {
       if (!event?.rental_address?.zip) {
         console.log("No zipCode for event:", event.id);
-        return event;
+        return { ...event, comps_list: [] };
       }
 
       try {
@@ -310,7 +300,7 @@ export async function generateTaxPacketData(
         );
 
         if (event.defendability_scores.digital_valuation === false) {
-          return event;
+          return { ...event, comps_list: [] };
         }
 
         const { data: marketCode, error: marketCodeError } = await supabase
@@ -318,16 +308,16 @@ export async function generateTaxPacketData(
           .select("*")
           .eq("zip", event.rental_address.zip)
           .limit(1)
-          .single();
+          .single() as { data: MarketCode | null; error: unknown };
 
         if (marketCodeError) {
           console.log("No marketCode for event:", event.id);
-          return event;
+          return { ...event, comps_list: [] };
         }
 
         if (!marketCode) {
           console.log("No marketCode for event:", event.id);
-          return event;
+          return { ...event, comps_list: [] };
         }
 
         const allAirDnaListings =
@@ -335,11 +325,11 @@ export async function generateTaxPacketData(
             marketId: marketCode.city_id,
             offset: 0,
             pageSize: 10,
-          });
+          }) as { data: AirDNAListing[]; isError: boolean } | null;
 
         if (!allAirDnaListings || allAirDnaListings.isError) {
           console.log("No allAirDnaListings for event:", event.id);
-          return event;
+          return { ...event, comps_list: [] };
         }
 
         const closestPropertyResult = findClosestProperty(
@@ -349,26 +339,27 @@ export async function generateTaxPacketData(
 
         if (!closestPropertyResult || !closestPropertyResult.bestMatch) {
           console.log("No closestPropertyResult for event:", event.id);
-          return event;
+          return { ...event, comps_list: [] };
         }
 
         const comps = await airdnaUtils.fetchCompsListNew({
           listingId: closestPropertyResult.bestMatch.property_id,
-        });
+        }) as { data: Comp[]; isError: boolean } | null;
 
         if (comps?.isError) {
           console.warn(
             "No properties in comps response for zip:",
             event.rental_address.zip
           );
-          return event;
+          return { ...event, comps_list: [] };
         }
         return {
           ...event,
-          comps_list: comps.data,
+          comps_list: comps?.data || [],
         };
       } catch (err) {
         console.log(err);
+        return { ...event, comps_list: [] };
       }
     })
   );
@@ -390,8 +381,8 @@ export async function generateTaxPacketData(
     userName: `${user?.user_metadata.first_name} ${user?.user_metadata.last_name}`,
     totalEvents: totalDays,
     taxDeductions: taxCalculations,
-    csvLink: null,
-    reimbursementPlan: reimbursementPlan?.signatureDocUrl || null,
+    csvLink: "",
+    reimbursementPlan: reimbursementPlan?.signature_doc_url || "",
     eventsArray: eventsWithComps,
     isAlreadyHaveReimbursementPlan,
   };
@@ -403,15 +394,8 @@ export async function createTaxPacketPDF(
   packetData: TaxPacketData,
   events: EventDatabaseWithAllData[],
   selectedYear: number | string,
-  saveData: {
-    _events: string[];
-    amount: number;
-    packetId: string;
-    eventsCsvLink: string;
-    pdfPath: string;
-    reimbursementPlan: string;
-  }
-) {
+  saveData: TaxPacketSaveData
+): Promise<TaxPacketPDFResult> {
   try {
     const eventFilteredByRental: { [key: string]: EventDatabaseWithAllData[] } =
       {};
@@ -531,10 +515,6 @@ export async function createTaxPacketPDF(
     packetData.csvLink = csvLink;
     saveData.eventsCsvLink = csvLink;
 
-    console.log("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    console.dir(Object.keys(packetData.eventsArray?.[0]), { depth: null });
-    console.log("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-
     const html = sendPacketToHtml(
       packetData.userName,
       packetData.taxYear,
@@ -547,14 +527,14 @@ export async function createTaxPacketPDF(
     );
 
     const pdf = await pdfService.generatePDF(html, {
-      filename: `${packetData.taxYear}_${packetData.userName}.pdf`,
+      filename: `${packetData.taxYear}_${packetData.userName || 'User'}.pdf`,
     });
     const pdfUploadDetails = await uploadFileToS3(
       pdf.buffer,
-      `${packetData.taxYear}_${packetData.userName}.pdf`,
+      `${packetData.taxYear}_${packetData.userName || 'User'}.pdf`,
       events[0].created_by,
       {
-        filename: `${packetData.taxYear}_${packetData.userName}.pdf`,
+        filename: `${packetData.taxYear}_${packetData.userName || 'User'}.pdf`,
         contentType: "application/pdf",
       }
     );
@@ -563,7 +543,7 @@ export async function createTaxPacketPDF(
     return {
       success: true,
       data: {
-        pdfPath: pdfUploadDetails.url,
+        pdfPath: pdfUploadDetails.url || "",
         csvLink,
         eventsArray,
       },
@@ -585,13 +565,13 @@ export const sendPacketToHtml = (
   userName: string,
   taxYear: number | string,
   totalEvents: number,
-  taxDeductions: TaxDeductions,
+  taxDeductions: CalculatedTaxDeductions,
   csvLink: string,
   documents: Document[],
   eventsArray: (EventDatabaseWithAllData & { comps_list: Comp[] })[],
   reimbursementPlan: string
-) => {
-  const { totalDeduction, potentialSavings } = taxDeductions;
+): string => {
+  const { totalDeduction = 0, potentialSavings = 0 } = taxDeductions;
 
   const calculateDuration = (
     startTimeStr: string,
@@ -632,9 +612,7 @@ export const sendPacketToHtml = (
     const totalDurationHours = (dailyDurationMinutes * daysDiff) / 60;
 
     return totalDurationHours.toFixed(1); // Return with 1 decimal place
-  };
-
-  console.log("reimbursementPlan: ", reimbursementPlan);    
+  }; 
 
   // Generate events table rows
   const generateEventsTableRows = (
@@ -804,7 +782,7 @@ export const sendPacketToHtml = (
                   ${
                     isImage
                       ? `<img src="${doc.url}" alt="${
-                          doc.title || "Document preview"
+                          doc.name || "Document preview"
                         }" />`
                       : `<div class="w-full h-32 flex items-center justify-center bg-gray-100 border rounded">
                         <span class="text-3xl">${getFileIcon(
@@ -814,8 +792,8 @@ export const sendPacketToHtml = (
                   }
                 </div>
                 <div class="document-info">
-                  <h4>${doc.title || "Document"}</h4>
-                  <p>${doc.description || ""}</p>
+                  <h4>${doc.name || "Document"}</h4>
+                  <p>${doc.type || ""}</p>
                   <a href="${
                     doc.url
                   }" target="_blank" class="text-xs text-blue-500 hover:underline">

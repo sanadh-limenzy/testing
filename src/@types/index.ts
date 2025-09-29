@@ -340,3 +340,165 @@ export interface UserNotificationCategory {
   category_id?: string | null;
   created_at?: string | null;
 }
+
+// Tax Packet Types
+export interface TaxDeductions {
+  totalDeduction: number;
+  potentialSavings: number;
+  totalTaxableAmount?: number;
+  daysUsed?: number;
+  daysRemaining?: number;
+}
+
+export interface CalculatedTaxDeductions {
+  totalDeduction?: number;
+  totalTaxableAmount?: number;
+  potentialSavings?: number;
+  daysUsed?: number;
+  daysRemaining?: number;
+}
+
+export interface TaxPacketData {
+  taxYear: number;
+  userName: string;
+  totalEvents: number;
+  taxDeductions: CalculatedTaxDeductions;
+  csvLink: string;
+  reimbursementPlan: string;
+  eventsArray: (EventDatabaseWithAllData & { comps_list: Comp[] })[];
+  isAlreadyHaveReimbursementPlan: boolean;
+}
+
+export interface TaxPacketSaveData {
+  _events: string[];
+  amount: number;
+  packetId: string;
+  eventsCsvLink: string;
+  pdfPath: string;
+  reimbursementPlan: string;
+  _createdBy?: string;
+  status?: string;
+  rentalAgreement?: ProposalDatabase[];
+  events?: EventDatabaseWithAllData[];
+  totalEvents?: number;
+  year?: string | number;
+}
+
+export interface TaxPacketPDFResult {
+  success: boolean;
+  data: {
+    pdfPath: string;
+    csvLink: string;
+    eventsArray: Array<{
+      "Event #": string;
+      Residence: string;
+      "Corporate Event": string;
+      Description: string;
+      "Start Time": string;
+      "End Time": string;
+      Duration: string;
+      Amount: string;
+      "Taxable Amount": string;
+      "Add To My Calendar": string;
+      Thumbnails: string;
+      "Number of people attending": string;
+      "Areas not included": string;
+      "Defendability Score": string;
+      Invoice: string;
+      Documents: string;
+    }>;
+  } | null;
+  error: string | null;
+}
+
+// API Response Types
+export interface TaxPacketPreviewResponse {
+  success: boolean;
+  data: {
+    pdfPath: string;
+    csvLink: string;
+    eventsArray: Array<{
+      "Event #": string;
+      Residence: string;
+      "Corporate Event": string;
+      Description: string;
+      "Start Time": string;
+      "End Time": string;
+      Duration: string;
+      Amount: string;
+      "Taxable Amount": string;
+      "Add To My Calendar": string;
+      Thumbnails: string;
+      "Number of people attending": string;
+      "Areas not included": string;
+      "Defendability Score": string;
+      Invoice: string;
+      Documents: string;
+    }>;
+  } | null;
+  error: string | null;
+}
+
+export interface TaxPacketPreviewError {
+  error: string;
+}
+
+// Subscriber Profile with Reimbursement Plan
+export interface SubscriberProfileWithReimbursementPlan {
+  id: string;
+  user_id: string;
+  is_free_subscription_active: boolean;
+  is_already_have_reimbursement_plan: boolean;
+  reimbursement_plan: ProposalDatabase | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// AirDNA Types (if not already defined)
+export interface Comp {
+  property_id: string;
+  details: {
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+  };
+  metrics: {
+    adr: number;
+  };
+}
+
+export interface AirDNAListing {
+  property_id: string;
+  country_name: string;
+  state_name: string;
+  city_name: string;
+  zipcode: string;
+  bedrooms: number;
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+// Market Code Type
+export interface MarketCode {
+  id: string;
+  zip: string;
+  city_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Send Packet Database Type
+export interface SendPacketDatabase {
+  id: string;
+  created_by: string;
+  year: string | number;
+  pdf_path: string | null;
+  events_csv_link: string | null;
+  status: string;
+  amount: number;
+  events: string[];
+  created_at?: string;
+  updated_at?: string;
+}

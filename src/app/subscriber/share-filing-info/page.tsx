@@ -5,23 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { useTaxPacket } from "@/hooks/useTaxPacket";
 
 export default function ShareFilingInfoPage() {
   const [email, setEmail] = useState("");
   const [ccOwnEmail, setCcOwnEmail] = useState(false);
 
+  const {
+    isLoadingPreview,
+    isLoadingSend,
+    generatePreview,
+    sendPacket,
+    isAnyLoading,
+  } = useTaxPacket({ selectedYear: new Date().getFullYear().toString() });
+
   const handlePreviewPacket = async () => {
-    const response = await fetch(
-      "/api/subscriber/pdf/tax-packet-preview?selected_year=2025"
-    );
-    const data = await response.json();
-    console.log(data);
-    // Add preview functionality here
+    try {
+      await generatePreview();
+    } catch {
+      // Error handling is done in the hook
+    }
   };
 
-  const handleSendPacket = () => {
-    console.log("Send packet clicked");
-    // Add send functionality here
+  const handleSendPacket = async () => {
+    try {
+      await sendPacket(email, ccOwnEmail);
+    } catch {
+      // Error handling is done in the hook
+    }
   };
 
   return (
@@ -73,15 +85,32 @@ export default function ShareFilingInfoPage() {
           <div className="flex space-x-4">
             <Button
               onClick={handlePreviewPacket}
-              className="flex-1 h-12 bg-orange-500 hover:bg-orange-600 text-white font-medium"
+              disabled={isAnyLoading}
+              variant={"secondary"}
+              className="flex-1 h-12 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Preview Packet
+              {isLoadingPreview ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Preview...
+                </>
+              ) : (
+                "Preview Packet"
+              )}
             </Button>
             <Button
               onClick={handleSendPacket}
-              className="flex-1 h-12 bg-teal-600 hover:bg-teal-700 text-white font-medium"
+              disabled={isAnyLoading || !email.trim()}
+              className="flex-1 h-12 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send Packet
+              {isLoadingSend ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Packet...
+                </>
+              ) : (
+                "Send Packet"
+              )}
             </Button>
           </div>
 
