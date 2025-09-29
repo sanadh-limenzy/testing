@@ -278,6 +278,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
   }
 }

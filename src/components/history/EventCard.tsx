@@ -2,11 +2,14 @@
 
 import type { EventDatabaseWithAllData } from "@/@types/index";
 import { Button } from "@/components/ui/button";
-import { Edit3, X, Trash2 } from "lucide-react";
+import { Edit3, X, Trash2, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { meetsMinimumDuration } from "@/lib/time-utils";
 import eventUtils from "@/lib/event-utils";
 import type { DefendabilityScoreParams } from "@/lib/event-utils";
+import { useCompleteEvent } from "@/hooks/useCompleteEvent";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const getEventStatus = (event: EventDatabaseWithAllData) => {
   if (event.is_draft)
@@ -44,6 +47,9 @@ export function EventCard({
   event: EventDatabaseWithAllData;
   onDelete: (event: EventDatabaseWithAllData) => void;
 }) {
+  const [isCompleting, setIsCompleting] = useState(false);
+  const completeEventMutation = useCompleteEvent();
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -58,6 +64,57 @@ export function EventCard({
   };
 
   const status = getEventStatus(event);
+
+  // Check if event can be completed
+  const canCompleteEvent = () => {
+    // Event must not already be completed
+    if (event.is_completed_event) return false;
+
+    // Event end date must have passed
+    const endDate = new Date(event.end_date);
+    const now = new Date();
+
+    console.log("event.end_date: ", event.end_date);
+    console.log("now: ", new Date());
+
+    console.log("event.is_completed_event: ", event.is_completed_event);
+    console.log("event.rental_agreement: ", event.rental_agreement);
+    console.log(
+      "event.rental_agreement.is_signature_done: ",
+      event.rental_agreement?.is_signature_done
+    );
+    console.log(
+      "event.rental_agreement.is_business_signature_done: ",
+      event.rental_agreement?.is_business_signature_done
+    );
+
+    if (endDate > now) return false;
+
+    // Rental agreement must be signed
+    const rentalAgreement = event.rental_agreement;
+    if (
+      !rentalAgreement ||
+      (!rentalAgreement.is_signature_done &&
+        !rentalAgreement.is_business_signature_done)
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!canCompleteEvent()) return;
+
+    setIsCompleting(true);
+    try {
+      await completeEventMutation.mutateAsync(event.id);
+    } catch {
+      toast.error("Failed to complete event");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   // Create defendability score parameters object
   const defendabilityParams: DefendabilityScoreParams = {
@@ -167,6 +224,30 @@ export function EventCard({
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Complete Event Button */}
+          {canCompleteEvent() && (
+            <div className="w-full">
+              <Button
+                onClick={handleCompleteEvent}
+                disabled={isCompleting || completeEventMutation.isPending}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                {isCompleting || completeEventMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete Event
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Defendability Score and Valuation */}
           <div className="text-right">

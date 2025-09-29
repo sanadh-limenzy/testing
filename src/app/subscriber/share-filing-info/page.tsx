@@ -10,8 +10,12 @@ export default function ShareFilingInfoPage() {
   const [email, setEmail] = useState("");
   const [ccOwnEmail, setCcOwnEmail] = useState(false);
 
-  const handlePreviewPacket = () => {
-    console.log("Preview packet clicked");
+  const handlePreviewPacket = async () => {
+    const response = await fetch(
+      "/api/subscriber/pdf/tax-packet-preview?selected_year=2025"
+    );
+    const data = await response.json();
+    console.log(data);
     // Add preview functionality here
   };
 
@@ -23,9 +27,7 @@ export default function ShareFilingInfoPage() {
   return (
     <div className="min-h-screen bg-white p-8">
       {/* Page Title */}
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        Tax Filing 2025
-      </h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">Tax Filing 2025</h1>
 
       {/* Form Section */}
       <Card className="max-w-2xl mx-auto p-8 shadow-sm border-gray-100">

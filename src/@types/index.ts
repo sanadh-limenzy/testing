@@ -218,6 +218,7 @@ export interface EventDatabaseWithAllData extends EventDatabase {
   };
   residence: string;
   business_address: UserAddress;
+  rental_agreement: ProposalDatabase;
 }
 
 export interface EventFormData {

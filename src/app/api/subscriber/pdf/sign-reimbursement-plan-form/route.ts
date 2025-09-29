@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    revalidateTag("reimbursement-plan-page");
+    revalidatePath("/subscriber/reimbursement-plan");
+
     try {
       const html = reimbursementPlanToHtml(business_signature);
 
@@ -183,8 +186,21 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      revalidateTag("reimbursement-plan-page");
-      revalidatePath("/subscriber/reimbursement-plan");
+      const { error: subscriberProfileError } = await supabase
+        .from("subscriber_profile")
+        .update({
+          reimbursement_plan_id: proposal.id,
+        })
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (subscriberProfileError) {
+        console.error(
+          "Error updating subscriber profile:",
+          subscriberProfileError
+        );
+      }
 
       return NextResponse.json({
         success: true,
