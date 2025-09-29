@@ -26,7 +26,7 @@ export function EventFormActions({
   eventId,
 }: EventFormActionsProps) {
   const { isEditMode, form, isCreateMode } = useEventForm();
-  console.log(isValid, "isValid");
+
   return (
     <div className={`gap-4 pt-6 border-t`}>
       {eventId ? (
