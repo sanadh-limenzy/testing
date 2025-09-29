@@ -66,6 +66,9 @@ export async function GET(
         ),
         rental_address:user_addresses!rental_address_id (
         *
+        ),
+        rental_agreement:proposals!rental_agreement_id(
+        *
         )
       `
       )

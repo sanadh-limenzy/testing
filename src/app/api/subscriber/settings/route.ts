@@ -114,9 +114,9 @@ export async function GET() {
       const { data: planData, error: planError } = await supabase
         .from("proposals")
         .select("*")
-        .eq("id", userProfile.subscriber_profile.reimbursement_plan)
         .eq("created_by", user.id)
         .eq("form_type", "Reimbursement_Plan")
+        .limit(1)
         .single();
 
       if (!planError && planData) {
@@ -163,7 +163,8 @@ export async function GET() {
       notificationSettings: notificationSettings || null,
       plans: plans || [],
       currentPlan: userProfile.subscriber_profile?.plan_id || null,
-      isAutoRenewSubscription: userProfile.subscriber_profile?.is_auto_renew_subscription || false,
+      isAutoRenewSubscription:
+        userProfile.subscriber_profile?.is_auto_renew_subscription || false,
     };
 
     return NextResponse.json({

@@ -202,11 +202,11 @@ export async function GET(request: NextRequest) {
       console.info(
         `[RENTAL_AMOUNTS] Fetching fresh data from AirDNA for city_id: ${market_code_data.city_id}, bedrooms: ${future_daily_pricing_params.bedrooms}`
       );
-      const { futureDailyPricingData } = await airdnaUtils.fetchFuturePriceNew(
-        market_code_data.city_id,
-        future_daily_pricing_params.bedrooms,
-        12
-      );
+      const { futureDailyPricingData } = await airdnaUtils.fetchFuturePriceNew({
+        bedrooms: future_daily_pricing_params.bedrooms,
+        months: 12,
+        cityId: market_code_data.city_id,
+      });
 
       console.info(
         `[RENTAL_AMOUNTS] Received ${

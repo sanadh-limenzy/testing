@@ -23,7 +23,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -33,7 +32,6 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LogoutButton } from "../ui/logout-button";
 import Link from "next/link";
 import { useAuthContext } from "@/contexts/AuthContext";
 import Image from "next/image";
@@ -309,24 +307,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <LogoutButton
-                role={user?.user_metadata?.user_type}
-                name={
-                  user?.user_metadata?.first_name ||
-                  user?.user_metadata?.last_name
-                }
-                email={user?.email}
-                isCollapsed={!open}
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

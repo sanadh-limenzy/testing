@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useEventForm } from "@/contexts/EventFormContext";
-import { Plus } from "lucide-react";
+import { Plus, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,8 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { useEvent } from "@/hooks/useEvent";
+import { useCompleteEvent } from "@/hooks/useCompleteEvent";
+import { toast } from "sonner";
 
 interface EventFormActionsProps {
   isValid: boolean;
@@ -26,6 +28,47 @@ export function EventFormActions({
   eventId,
 }: EventFormActionsProps) {
   const { isEditMode, form, isCreateMode } = useEventForm();
+  const [isCompleting, setIsCompleting] = useState(false);
+  const completeEventMutation = useCompleteEvent();
+
+  // Get event data to check completion conditions
+  const { data: eventData } = useEvent(eventId || "");
+
+  // Check if event can be completed
+  const canCompleteEvent = () => {
+    if (!eventId || !eventData?.data) return false;
+    
+    const event = eventData.data;
+    
+    // Event must not already be completed
+    if (event.is_completed_event) return false;
+    
+    // Event end date must have passed
+    const endDate = new Date(event.end_date);
+    const now = new Date();
+    if (endDate > now) return false;
+    
+    // Rental agreement must be signed
+    const rentalAgreement = event.rental_agreement;
+    if (!rentalAgreement || (!rentalAgreement.is_signature_done && !rentalAgreement.is_business_signature_done)) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!eventId || !canCompleteEvent()) return;
+    
+    setIsCompleting(true);
+    try {
+      await completeEventMutation.mutateAsync(eventId);
+    } catch {
+      toast.error("Failed to complete event");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   return (
     <div className={`gap-4 pt-6 border-t`}>
@@ -76,6 +119,30 @@ export function EventFormActions({
             : "Book Event"}
         </Button>
       </div>
+
+      {/* Complete Event Button - Only show in edit mode when conditions are met */}
+      {isEditMode && eventId && canCompleteEvent() && (
+        <div className="mt-4">
+          <Button
+            onClick={handleCompleteEvent}
+            disabled={isCompleting || completeEventMutation.isPending}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            size="lg"
+          >
+            {isCompleting || completeEventMutation.isPending ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Completing Event...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Complete Event
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

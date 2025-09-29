@@ -32,7 +32,7 @@ export interface UploadedFile {
  * Upload a file to S3
  */
 export async function uploadFileToS3(
-  file: File | Buffer,
+  file: File | Buffer | string,
   folder = "uploads",
   userId: string | null = null,
   metadata: {
