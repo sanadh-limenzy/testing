@@ -166,7 +166,10 @@ export function EventFormActions({
                   !form.getValues("templateName")?.trim()
                 }
               >
-                {form.formState.isSubmitting ? "Saving..." : "Save Template"}
+                {form.formState.isSubmitting &&
+                form.getValues("currentAction") === "template"
+                  ? "Saving Template..."
+                  : "Save Template"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -176,10 +179,16 @@ export function EventFormActions({
             type="button"
             variant="outline"
             className="flex-1"
-            disabled={!isValid || form.formState.isSubmitting}
-            onClick={() => onSubmit()}
+            disabled={form.formState.isSubmitting}
+            onClick={() => {
+              form.setValue("currentAction", "draft");
+              onSubmit();
+            }}
           >
-            Save As Draft
+            {form.formState.isSubmitting &&
+            form.getValues("currentAction") === "draft"
+              ? "Saving As Draft..."
+              : "Save As Draft"}
           </Button>
         )}
         <Button
@@ -188,13 +197,17 @@ export function EventFormActions({
             isValid ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-400"
           } text-white`}
           disabled={!isValid || form.formState.isSubmitting}
-          onClick={() => onSubmit()}
+          onClick={() => {
+            form.setValue("currentAction", isEditMode ? "update" : "book");
+            onSubmit();
+          }}
         >
-          {isEditMode
+          {isEditMode && form.getValues("currentAction") === "update"
             ? form.formState.isSubmitting
               ? "Updating Event..."
               : "Update Event"
-            : form.formState.isSubmitting
+            : form.formState.isSubmitting &&
+              form.getValues("currentAction") === "book"
             ? "Booking Event..."
             : "Book Event"}
         </Button>

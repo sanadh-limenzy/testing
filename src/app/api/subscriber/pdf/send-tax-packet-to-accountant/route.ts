@@ -9,16 +9,16 @@ import {
   generateTaxPacketData,
 } from "@/html-to-pdf/send-packet";
 import { deleteFileFromS3 } from "@/lib/s3-utils";
-import { generateRandomString } from "@/lib/string-utils";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { generateRandomString, generateUsernameFromEmail } from "@/lib/string-utils";
+import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
 import {
-  taxPacketPreviewQuerySchema,
+  sendTaxPacketRequestSchema,
   subscriberProfileWithReimbursementPlanSchema,
   taxPacketSaveDataSchema,
 } from "@/@types/validation";
 import { NextResponse } from "next/server";
 
-export async function GET(
+export async function POST(
   request: Request
 ): Promise<NextResponse<TaxPacketPreviewResponse | TaxPacketPreviewError>> {
   try {
@@ -37,23 +37,23 @@ export async function GET(
       );
     }
 
-    // Validate query parameters
-    const url = new URL(request.url);
-    const queryParams = Object.fromEntries(url.searchParams.entries());
+    // Parse and validate request body
+    const body = await request.json();
 
-    const queryValidation = taxPacketPreviewQuerySchema.safeParse(queryParams);
-    if (!queryValidation.success) {
+    const bodyValidation = sendTaxPacketRequestSchema.safeParse(body);
+    if (!bodyValidation.success) {
+      console.error("Invalid request parameters:", bodyValidation.error);
       return NextResponse.json(
         {
           error:
-            queryValidation.error.issues[0]?.message ||
-            "Invalid query parameters",
+            bodyValidation.error.issues[0]?.message ||
+            "Invalid request parameters",
         },
         { status: 400 }
       );
     }
 
-    const { selected_year: selectedYear } = queryValidation.data;
+    const { email: accountantEmail, selected_year: selectedYear, is_send_to_self: isSendToSelf } = bodyValidation.data;
 
     // Fetch and validate subscriber profile
     const { data: subscriberProfile, error: subscriberProfileError } =
@@ -124,6 +124,7 @@ export async function GET(
             event_invoices (*)
           `
       )
+      .eq("is_draft", false)
       .eq("created_by", user.id)
       .eq("year", selectedYear);
 
@@ -218,7 +219,193 @@ export async function GET(
           eventsArray: [], // We don't need to regenerate this data
         },
         error: null,
+      }      );
+    }
+
+    // Check for accountant info
+    let accountantId: string | null = null;
+    let accountantProfileId: string | null = null;
+
+    // First, check if user exists with this email
+    const { data: existingUser, error: userCheckError } = await supabase
+      .from("user_profile")
+      .select("id, user_type")
+      .eq("email", accountantEmail.toLowerCase())
+      .limit(1)
+      .single();
+
+    if (userCheckError && userCheckError.code !== "PGRST116") {
+      console.error("Error checking for existing user:", userCheckError);
+      return NextResponse.json(
+        { error: "Failed to check for existing user" },
+        { status: 500 }
+      );
+    }
+
+    if (existingUser) {
+      // User exists - check if they are an accountant
+      if (existingUser.user_type !== "Accountant") {
+        return NextResponse.json(
+          { error: `An existing ${existingUser.user_type} is found with the following Email` },
+          { status: 400 }
+        );
+      }
+      accountantId = existingUser.id;
+
+      // Get accountant profile ID
+      const { data: accountantProfile, error: accountantProfileError } = await supabase
+        .from("accountant_profile")
+        .select("id")
+        .eq("user_id", accountantId)
+        .limit(1)
+        .single();
+
+      if (accountantProfileError || !accountantProfile) {
+        console.error("Error fetching accountant profile:", accountantProfileError);
+        return NextResponse.json(
+          { error: "Failed to fetch accountant profile" },
+          { status: 500 }
+        );
+      }
+
+      accountantProfileId = accountantProfile.id;
+    } else {
+      // User doesn't exist - create new accountant
+      const username = generateUsernameFromEmail(accountantEmail);
+      const randomPassword = generateRandomString({
+        length: 12,
+        uppercase: true,
+        lowercase: true,
+        numbers: true,
+        symbols: true,
       });
+
+      // Create user in Supabase Auth using service role client
+      const adminClient = await createServiceRoleClient();
+      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email: accountantEmail.toLowerCase(),
+        password: randomPassword,
+        email_confirm: false,
+      });
+
+      if (authError || !authData.user) {
+        console.error("Error creating accountant auth user:", authError);
+        return NextResponse.json(
+          { error: "Failed to create accountant user" },
+          { status: 500 }
+        );
+      }
+
+      // Create user_profile
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from("user_profile")
+        .insert({
+          id: authData.user.id,
+          email: accountantEmail.toLowerCase(),
+          username: username,
+          first_name: username,
+          last_name: "",
+          user_type: "Accountant",
+          is_active: true,
+          is_email_verified: false,
+        })
+        .select("id")
+        .single();
+
+      if (userProfileError || !userProfile) {
+        console.error("Error creating user profile:", userProfileError);
+        return NextResponse.json(
+          { error: "Failed to create accountant profile" },
+          { status: 500 }
+        );
+      }
+
+      accountantId = authData.user.id;
+
+      // Create accountant_profile
+      const { data: newAccountantProfile, error: accountantProfileError } = await supabase
+        .from("accountant_profile")
+        .insert({
+          user_id: authData.user.id,
+          request_accepted: false,
+          invited_by_admin: false,
+          total_client_count: 0,
+        })
+        .select("id")
+        .single();
+
+      if (accountantProfileError || !newAccountantProfile) {
+        console.error("Error creating accountant profile:", accountantProfileError);
+        return NextResponse.json(
+          { error: "Failed to create accountant profile" },
+          { status: 500 }
+        );
+      }
+
+      accountantProfileId = newAccountantProfile.id;
+    }
+
+    // Update subscriber profile with accountant
+    const { error: updateSubscriberError } = await supabase
+      .from("subscriber_profile")
+      .update({
+        accountant_id: accountantProfileId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id);
+
+    if (updateSubscriberError) {
+      console.error("Error updating subscriber profile:", updateSubscriberError);
+      // Continue execution even if this fails
+    }
+
+    // Create accountant_clients relationship if it doesn't exist
+    const { data: existingRelationship, error: relationshipCheckError } = await supabase
+      .from("accountant_clients")
+      .select("id")
+      .eq("accountant_id", accountantProfileId)
+      .eq("client_id", user.id)
+      .limit(1)
+      .single();
+
+    if (relationshipCheckError && relationshipCheckError.code !== "PGRST116") {
+      console.error("Error checking accountant_clients relationship:", relationshipCheckError);
+      // Continue execution
+    }
+
+    if (!existingRelationship) {
+      const { error: insertRelationshipError } = await supabase
+        .from("accountant_clients")
+        .insert({
+          accountant_id: accountantProfileId,
+          client_id: user.id,
+        });
+
+      if (insertRelationshipError) {
+        console.error("Error creating accountant_clients relationship:", insertRelationshipError);
+        // Continue execution
+      }
+
+      // Increment accountant's total client count
+      const { data: currentProfile, error: fetchProfileError } = await supabase
+        .from("accountant_profile")
+        .select("total_client_count")
+        .eq("id", accountantProfileId)
+        .single();
+
+      if (!fetchProfileError && currentProfile) {
+        const { error: incrementError } = await supabase
+          .from("accountant_profile")
+          .update({
+            total_client_count: (currentProfile.total_client_count || 0) + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", accountantProfileId);
+
+        if (incrementError) {
+          console.error("Error incrementing client count:", incrementError);
+        }
+      }
     }
 
     // Check for existing packet that hasn't been sent and clean up if necessary
@@ -334,7 +521,7 @@ export async function GET(
           console.error("Error checking for existing record:", existingError);
           // Continue execution even if we can't update the database
         } else if (existingRecord) {
-          // Update existing record
+          // Update existing record and mark as sent
           const { error: updateError } = await supabase
             .from("send_packets")
             .update({
@@ -343,6 +530,11 @@ export async function GET(
               total_events: events.length,
               events_csv_link: taxPacketPDFResult.data.csvLink,
               amount: taxPacketData.taxDeductions.totalDeduction || 0,
+              accountant_id: accountantId,
+              cpa_emails: [accountantEmail],
+              is_send_to_self: isSendToSelf,
+              is_mail_sent: true,
+              status: "sent",
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingRecord.id);
@@ -351,7 +543,7 @@ export async function GET(
             console.error("Error updating existing record:", updateError);
           }
         } else {
-          // Create new record
+          // Create new record and mark as sent
           const { error: insertError } = await supabase
             .from("send_packets")
             .insert({
@@ -362,8 +554,11 @@ export async function GET(
               events_csv_link: taxPacketPDFResult.data.csvLink,
               year: selectedYear,
               amount: taxPacketData.taxDeductions.totalDeduction || 0,
-              status: "pending",
-              is_mail_sent: false,
+              accountant_id: accountantId,
+              cpa_emails: [accountantEmail],
+              is_send_to_self: isSendToSelf,
+              status: "sent",
+              is_mail_sent: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });
@@ -380,12 +575,15 @@ export async function GET(
 
     return NextResponse.json(taxPacketPDFResult);
   } catch (error) {
-    console.error("Unexpected error in tax packet preview:", error);
+    console.error(
+      "Unexpected error in sending tax packet to accountant:",
+      error
+    );
     return NextResponse.json(
       {
         success: false,
         data: null,
-        error: "An unexpected error occurred while generating the tax packet",
+        error: "An unexpected error occurred while sending the tax packet",
       },
       { status: 500 }
     );

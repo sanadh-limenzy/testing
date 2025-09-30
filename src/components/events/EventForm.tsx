@@ -414,6 +414,106 @@ export function EventForm({
         console.log("Business address does not match the property");
         data.business_address_id = business_address_id || "";
       }
+
+      // Skip strict validation for drafts
+      const skipValidation = data.currentAction === "draft";
+
+      if (skipValidation) {
+        // For drafts, skip validation and proceed directly
+        try {
+          const updatedData = { ...data };
+
+          if (data.upload_thumbnails && data.upload_thumbnails.length > 0) {
+            const thumbnailUploadResult = await uploadFiles({
+              files: data.upload_thumbnails,
+              folder: "event-thumbnails",
+            });
+
+            if (thumbnailUploadResult.success && thumbnailUploadResult.data) {
+              const newThumbnailUrls =
+                thumbnailUploadResult.data.uploadedFiles.map(
+                  (file) => file.url
+                );
+              updatedData.thumbnails = [
+                ...(data.thumbnails || []),
+                ...newThumbnailUrls,
+              ];
+            }
+          } else {
+            console.log("No thumbnails to upload");
+          }
+
+          if (data.upload_documents && data.upload_documents.length > 0) {
+            const documentUploadResult = await uploadFiles({
+              files: data.upload_documents,
+              folder: "event-documents",
+            });
+
+            if (documentUploadResult.success && documentUploadResult.data) {
+              const newDocuments = documentUploadResult.data.uploadedFiles.map(
+                (file) => ({
+                  id: file.url,
+                  name: file.name,
+                  url: file.url,
+                  type: file.type,
+                  size: file.size,
+                  created_at: new Date().toISOString(),
+                })
+              );
+              updatedData.event_documents = [
+                ...(data.event_documents || []),
+                ...newDocuments,
+              ];
+            }
+          } else {
+            console.log("No documents to upload");
+          }
+
+          delete updatedData.upload_thumbnails;
+          delete updatedData.upload_documents;
+
+          // Save as draft - create event with is_draft: true
+          const draftData = {
+            ...updatedData,
+            is_draft: true,
+          };
+          const result = await createEvent(draftData);
+          if (result.data) {
+            toast.success("Draft saved successfully!");
+            router.push(`/subscriber/home`);
+          }
+          form.reset({
+            residence: property?.id || "",
+            title: initialData?.title || "",
+            start_date: initialData?.start_date || "",
+            end_date: initialData?.end_date || "",
+            start_time: initialData?.start_time || "",
+            end_time: initialData?.end_time || "",
+            people_count: initialData?.people_count || "",
+            rental_amount:
+              initialData?.rental_amount ||
+              property?.avarage_value?.toString() ||
+              "",
+            description: initialData?.description || "",
+            manual_valuation: initialData?.manual_valuation || false,
+            money_paid_to_personal:
+              initialData?.money_paid_to_personal || false,
+            upload_documents: initialData?.upload_documents || [],
+            event_documents: initialData?.event_documents || [],
+            excluded_areas:
+              initialData?.excluded_areas ||
+              (property?.is_home_office_deduction ? "Home Office" : ""),
+            thumbnails: initialData?.thumbnails || [],
+            upload_thumbnails: [],
+          });
+          setClearTrigger(true);
+        } catch (error) {
+          console.error("Error uploading files or submitting form:", error);
+        }
+        return;
+      }
+
+      // For book/update actions, validate strictly
       const submitErrors = eventFormSubmitSchema.safeParse(data);
 
       if (submitErrors.success) {
@@ -476,13 +576,14 @@ export function EventForm({
             });
             router.push(`/subscriber/rental-agreement/${eventId}`);
           } else if (data.currentAction === "book" || isCreateMode) {
-            const { data } = await createEvent(updatedData);
-            if (data) {
-              router.push(`/subscriber/rental-agreement/${data.id}`);
+            const bookData = {
+              ...updatedData,
+              is_draft: false,
+            };
+            const result = await createEvent(bookData);
+            if (result.data) {
+              router.push(`/subscriber/rental-agreement/${result.data.id}`);
             }
-          } else if (data.currentAction === "draft") {
-            // TODO: Implement draft saving logic
-            toast.info("Draft saving not yet implemented");
           }
           form.reset({
             residence: property?.id || "",

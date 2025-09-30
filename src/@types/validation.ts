@@ -84,6 +84,7 @@ export const eventFormSchema = z
       .optional(),
     currentAction: z.enum(["book", "update", "template", "draft"]).optional(),
     templateName: z.string().optional(),
+    is_draft: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -203,8 +204,9 @@ export const eventFormSubmitSchema = z
         amount: z.number(),
       })
     ),
-    currentAction: z.enum(["book", "update", "template", "draft"]),
-    templateName: z.string(),
+    currentAction: z.enum(["book", "update", "template", "draft"]).optional(),
+    templateName: z.string().optional(),
+    is_draft: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -255,6 +257,12 @@ export type EventFormData = z.infer<typeof eventFormSchema>;
 // Tax Packet Validation Schemas
 export const taxPacketPreviewQuerySchema = z.object({
   selected_year: z.string().min(1, "Selected year is required"),
+});
+
+export const sendTaxPacketRequestSchema = z.object({
+  email: z.email("Invalid email address"),
+  selected_year: z.string().min(1, "Selected year is required"),
+  is_send_to_self: z.boolean().default(false),
 });
 
 export const taxDeductionsSchema = z.object({
@@ -390,6 +398,7 @@ export const taxPacketPDFResultSchema = z.object({
 
 // Type exports
 export type TaxPacketPreviewQuery = z.infer<typeof taxPacketPreviewQuerySchema>;
+export type SendTaxPacketRequest = z.infer<typeof sendTaxPacketRequestSchema>;
 export type TaxDeductionsValidated = z.infer<typeof taxDeductionsSchema>;
 export type CalculatedTaxDeductionsValidated = z.infer<typeof calculatedTaxDeductionsSchema>;
 export type CompValidated = z.infer<typeof compSchema>;

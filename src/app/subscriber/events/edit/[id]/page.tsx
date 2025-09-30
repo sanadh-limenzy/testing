@@ -6,28 +6,17 @@ import { EventFormData } from "@/@types/validation";
 import { convertTo24HourFormat } from "@/lib/time-utils";
 import { DefensibilityScore } from "@/@types/event-form";
 import { headers } from "next/headers";
+import { env } from "@/env";
 
 interface PageProps {
   params: Promise<{
     id: string;
   }>;
 }
-
-// Helper function to get the base URL for server-side fetching
-function getBaseUrl() {
-  // In production, use the actual domain
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  
-  // In development, use localhost
-  return "http://localhost:3000";
-}
-
 // Server-side data fetching functions
 async function fetchEvent(eventId: string) {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -51,7 +40,7 @@ async function fetchEvent(eventId: string) {
 
 async function fetchBusinessAddress() {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -80,7 +69,7 @@ async function fetchEventsFromRentalAddress(rentalAddressId: string | undefined)
   if (!rentalAddressId) return [];
 
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 

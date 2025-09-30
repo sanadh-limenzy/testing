@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EventForm } from "@/components/events/EventForm";
 import { TemplateSelectionWrapper } from "@/components/events/TemplateSelectionWrapper";
 import { headers } from "next/headers";
+import { env } from "@/env";
 
 interface SearchParams {
   residence?: string;
@@ -13,24 +14,12 @@ interface SearchParams {
 interface PageProps {
   searchParams: Promise<SearchParams>;
 }
-
-// Helper function to get the base URL for server-side fetching
-function getBaseUrl() {
-  // In production, use the actual domain
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-
-  // In development, use localhost
-  return "http://localhost:3000";
-}
-
 // Server-side data fetching functions
 async function fetchAddress(addressId: string | undefined) {
   if (!addressId) return null;
 
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -57,7 +46,7 @@ async function fetchAddress(addressId: string | undefined) {
 
 async function fetchBusinessAddress() {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -86,7 +75,7 @@ async function fetchEventTemplate(templateId: string | undefined) {
   if (!templateId) return null;
 
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -113,7 +102,7 @@ async function fetchEventTemplate(templateId: string | undefined) {
 
 async function fetchRentalAddresses() {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -137,7 +126,7 @@ async function fetchRentalAddresses() {
 
 async function fetchEventTemplates() {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -168,7 +157,7 @@ async function fetchEventsFromRentalAddress(
   if (!rentalAddressId) return [];
 
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 
@@ -200,7 +189,7 @@ async function fetchRentalAmounts(
   if (!addressId || isCustomPlan) return [];
 
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const headersList = await headers();
     const cookie = headersList.get("cookie") || "";
 

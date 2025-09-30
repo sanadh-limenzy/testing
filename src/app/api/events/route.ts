@@ -144,6 +144,7 @@ export async function POST(
       const { data: overlappingEvents, error: overlapError } = await supabase
         .from("events")
         .select("id, title, start_date, end_date")
+        .eq("is_draft", false)
         .eq("rental_address_id", eventData.residence)
         .eq("created_by", user.id)
         .lte("start_date", eventData.end_date)
@@ -202,6 +203,7 @@ export async function POST(
       .from("events")
       .select("event_number")
       .eq("created_by", user.id)
+      .eq("is_draft", false)
       .order("event_number", { ascending: false })
       .limit(1);
 
@@ -281,6 +283,7 @@ export async function POST(
       defendability_score_id: createdDefendabilityScore?.id || null, // Link to defendability score
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      is_draft: eventData.is_draft || false,
     };
 
     // Insert the event
@@ -413,7 +416,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       data: createdEvent,
-      message: "Event created successfully",
+      message: eventData.is_draft ? "Draft created successfully" : "Event created successfully",
     });
   } catch (error) {
     console.error("Error in event creation:", error);
@@ -460,6 +463,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         rental_address:user_addresses!rental_address_id (*)
       `
       )
+      .eq("is_draft", false)
       .eq("created_by", user.id)
       .order("created_at", { ascending: false });
 
