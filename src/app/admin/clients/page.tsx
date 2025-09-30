@@ -2,6 +2,8 @@
 import { cookies } from "next/headers";
 import { ClientsPageClient } from "./ClientsPageClient";
 
+export const dynamic = "force-dynamic";
+
 interface Client {
   id: string;
   firstName: string;
