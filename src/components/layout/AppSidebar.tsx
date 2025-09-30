@@ -43,7 +43,7 @@ import { SkeletonList } from "../ui/skeleton-loaders";
 export const sidebarMenuConfig = [
   {
     label: "Dashboard",
-    route: "/admin/dashboard",
+    route: "/admin/home",
     iconType: "Dashboard",
     permissionKey: "", // Assuming no specific permission for Dashboard
   },
