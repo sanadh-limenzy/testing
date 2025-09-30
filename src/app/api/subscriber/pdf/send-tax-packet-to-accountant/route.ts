@@ -1,8 +1,8 @@
-import { 
-  EventDatabaseWithAllData, 
+import {
+  EventDatabaseWithAllData,
   TaxPacketPreviewResponse,
   TaxPacketPreviewError,
-  TaxPacketSaveData
+  TaxPacketSaveData,
 } from "@/@types";
 import {
   createTaxPacketPDF,
@@ -11,14 +11,16 @@ import {
 import { deleteFileFromS3 } from "@/lib/s3-utils";
 import { generateRandomString } from "@/lib/string-utils";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { 
+import {
   taxPacketPreviewQuerySchema,
   subscriberProfileWithReimbursementPlanSchema,
-  taxPacketSaveDataSchema
+  taxPacketSaveDataSchema,
 } from "@/@types/validation";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request): Promise<NextResponse<TaxPacketPreviewResponse | TaxPacketPreviewError>> {
+export async function GET(
+  request: Request
+): Promise<NextResponse<TaxPacketPreviewResponse | TaxPacketPreviewError>> {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -38,11 +40,15 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     // Validate query parameters
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams.entries());
-    
+
     const queryValidation = taxPacketPreviewQuerySchema.safeParse(queryParams);
     if (!queryValidation.success) {
       return NextResponse.json(
-        { error: queryValidation.error.issues[0]?.message || "Invalid query parameters" },
+        {
+          error:
+            queryValidation.error.issues[0]?.message ||
+            "Invalid query parameters",
+        },
         { status: 400 }
       );
     }
@@ -59,7 +65,10 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
         .single();
 
     if (subscriberProfileError || !subscriberProfile) {
-      console.error("Failed to fetch subscriber profile:", subscriberProfileError);
+      console.error(
+        "Failed to fetch subscriber profile:",
+        subscriberProfileError
+      );
       return NextResponse.json(
         { error: "Failed to fetch subscriber profile" },
         { status: 500 }
@@ -67,9 +76,13 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     }
 
     // Validate subscriber profile structure
-    const profileValidation = subscriberProfileWithReimbursementPlanSchema.safeParse(subscriberProfile);
+    const profileValidation =
+      subscriberProfileWithReimbursementPlanSchema.safeParse(subscriberProfile);
     if (!profileValidation.success) {
-      console.error("Invalid subscriber profile structure:", profileValidation.error);
+      console.error(
+        "Invalid subscriber profile structure:",
+        profileValidation.error
+      );
       return NextResponse.json(
         { error: "Invalid subscriber profile data" },
         { status: 500 }
@@ -86,7 +99,10 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     }
 
     // Validate reimbursement plan
-    if (!validatedProfile.reimbursement_plan || !validatedProfile.reimbursement_plan.is_signature_done) {
+    if (
+      !validatedProfile.reimbursement_plan ||
+      !validatedProfile.reimbursement_plan.is_signature_done
+    ) {
       return NextResponse.json(
         { error: "Reimbursement Plan document signature is pending!" },
         { status: 400 }
@@ -98,15 +114,15 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
       .from("events")
       .select(
         `
-          *,
-          defendability_scores:defendability_score_id (*),
-          event_documents (*),
-          daily_amounts (*),
-          rental_address:user_addresses!rental_address_id (*),
-          business_address:user_addresses!business_address_id (*),
-          rental_agreement:proposals!rental_agreement_id (*),
-          event_invoices (*)
-        `
+            *,
+            defendability_scores:defendability_score_id (*),
+            event_documents (*),
+            daily_amounts (*),
+            rental_address:user_addresses!rental_address_id (*),
+            business_address:user_addresses!business_address_id (*),
+            rental_agreement:proposals!rental_agreement_id (*),
+            event_invoices (*)
+          `
       )
       .eq("created_by", user.id)
       .eq("year", selectedYear);
@@ -138,7 +154,9 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     }
 
     // Check if all events are completed
-    const incompleteEvents = events.filter(event => !event.is_completed_event);
+    const incompleteEvents = events.filter(
+      (event) => !event.is_completed_event
+    );
     if (incompleteEvents.length > 0) {
       return NextResponse.json(
         { error: "Some events have not been completed yet." },
@@ -147,7 +165,9 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     }
 
     // Check if all events have rental agreements
-    const eventsWithoutRentalAgreement = events.filter(event => !event.rental_agreement);
+    const eventsWithoutRentalAgreement = events.filter(
+      (event) => !event.rental_agreement
+    );
     if (eventsWithoutRentalAgreement.length > 0) {
       return NextResponse.json(
         { error: "Rental Agreement not found!" },
@@ -157,7 +177,7 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
 
     // Check if all rental agreements are signed
     const unsignedRentalAgreements = events.filter(
-      event =>
+      (event) =>
         !event.rental_agreement.is_business_signature_done &&
         !event.rental_agreement.is_signature_done
     );
@@ -195,9 +215,9 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
         data: {
           pdfPath: sentPacket.pdf_path,
           csvLink: sentPacket.events_csv_link || "",
-          eventsArray: [] // We don't need to regenerate this data
+          eventsArray: [], // We don't need to regenerate this data
         },
-        error: null
+        error: null,
       });
     }
 
@@ -241,7 +261,8 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
         uppercase: true,
         lowercase: true,
       }),
-      reimbursementPlan: validatedProfile.reimbursement_plan.signature_doc_url || "",
+      reimbursementPlan:
+        validatedProfile.reimbursement_plan.signature_doc_url || "",
       rentalAgreement: [],
       events: [],
       totalEvents: events.length,
@@ -282,16 +303,16 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
       taxPacketData,
       events,
       selectedYear,
-      saveData,
+      saveData
     );
 
     // Validate the result
     if (!taxPacketPDFResult.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          data: null, 
-          error: taxPacketPDFResult.error || "Failed to create tax packet PDF" 
+        {
+          success: false,
+          data: null,
+          error: taxPacketPDFResult.error || "Failed to create tax packet PDF",
         },
         { status: 500 }
       );
@@ -322,7 +343,7 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
               total_events: events.length,
               events_csv_link: taxPacketPDFResult.data.csvLink,
               amount: taxPacketData.taxDeductions.totalDeduction || 0,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq("id", existingRecord.id);
 
@@ -344,7 +365,7 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
               status: "pending",
               is_mail_sent: false,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             });
 
           if (insertError) {
@@ -358,14 +379,13 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
     }
 
     return NextResponse.json(taxPacketPDFResult);
-
   } catch (error) {
     console.error("Unexpected error in tax packet preview:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        data: null, 
-        error: "An unexpected error occurred while generating the tax packet" 
+      {
+        success: false,
+        data: null,
+        error: "An unexpected error occurred while generating the tax packet",
       },
       { status: 500 }
     );

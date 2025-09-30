@@ -12,17 +12,17 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Fix for DocuSign module resolution issues
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'docusign-esign': require.resolve('docusign-esign'),
-      };
-    }
-    return config;
-  },
-  serverExternalPackages: ['docusign-esign'],
+  // webpack: (config, { isServer }) => {
+  //   if (isServer) {
+  //     // Fix for DocuSign module resolution issues
+  //     config.resolve.alias = {
+  //       ...config.resolve.alias,
+  //       'docusign-esign': require.resolve('docusign-esign'),
+  //     };
+  //   }
+  //   return config;
+  // },
+  // serverExternalPackages: ['docusign-esign'],
 };
 
 export default nextConfig;

@@ -1,78 +1,269 @@
-"use client";
-
 import { Button } from "@/components/ui";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { EventForm } from "@/components/events/EventForm";
-import { useSearchParams } from "next/navigation";
-import {
-  useEventsFromRentalAddress,
-  useRentalAmounts,
-  useBusinessAddress,
-  useAddress,
-} from "@/hooks/useEvent";
-import { useEventTemplate, useEventTemplates } from "@/hooks/useEventTemplates";
-import { useRentalAddresses } from "@/hooks/useAddress";
-import { TemplateSelectionModal } from "@/components/events/TemplateSelectionModal";
-import { useRouter } from "next/navigation";
+import { TemplateSelectionWrapper } from "@/components/events/TemplateSelectionWrapper";
+import { headers } from "next/headers";
 
-export default function CreateEvent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const propertyId = searchParams.get("residence");
-  const templateId = searchParams.get("template");
+interface SearchParams {
+  residence?: string;
+  template?: string;
+}
 
-  const {
-    data: address,
-    isLoading: addressLoading,
-    error: addressError,
-  } = useAddress(propertyId || undefined);
-  const {
-    data: businessAddress,
-    isLoading: businessLoading,
-    error: businessError,
-  } = useBusinessAddress();
+interface PageProps {
+  searchParams: Promise<SearchParams>;
+}
 
-  const {
-    data: templateData,
-    isLoading: templateLoading,
-    error: templateError,
-  } = useEventTemplate(templateId || undefined);
+// Helper function to get the base URL for server-side fetching
+function getBaseUrl() {
+  // In production, use the actual domain
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
 
-  const {
-    data: rentalAddressesData,
-    isLoading: rentalAddressesLoading,
-    error: rentalAddressesError,
-  } = useRentalAddresses();
+  // In development, use localhost
+  return "http://localhost:3000";
+}
 
-  const {
-    data: templatesData,
-    isLoading: templatesLoading,
-    error: templatesError,
-  } = useEventTemplates({ isTemplate: true });
+// Server-side data fetching functions
+async function fetchAddress(addressId: string | undefined) {
+  if (!addressId) return null;
 
-  const {
-    data: eventsFromRentalAddressData,
-    isLoading: rentalAddressLoading,
-    error: rentalAddressError,
-  } = useEventsFromRentalAddress(propertyId || undefined);
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
 
-  const { data: rentalAmounts, isLoading: rentalAmountsLoading } =
-    useRentalAmounts(
-      (propertyId && (address?.is_custom_plan ? undefined : propertyId)) ||
-        undefined
+    const response = await fetch(
+      `${baseUrl}/api/subscriber/address/rental/${addressId}`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
     );
 
-  const templateAsInitialData = templateData?.data
+    if (!response.ok) {
+      console.error("Failed to fetch address:", response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    return result.success && result.data ? result.data : null;
+  } catch (error) {
+    console.error("Error fetching address:", error);
+    return null;
+  }
+}
+
+async function fetchBusinessAddress() {
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(
+      `${baseUrl}/api/subscriber/address/business/default`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch business address:", response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    return result.data || null;
+  } catch (error) {
+    console.error("Error fetching business address:", error);
+    return null;
+  }
+}
+
+async function fetchEventTemplate(templateId: string | undefined) {
+  if (!templateId) return null;
+
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(
+      `${baseUrl}/api/event-templates/${templateId}`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch template:", response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    return result.success && result.data ? result.data : null;
+  } catch (error) {
+    console.error("Error fetching template:", error);
+    return null;
+  }
+}
+
+async function fetchRentalAddresses() {
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(`${baseUrl}/api/subscriber/address/rental`, {
+      headers: { cookie },
+      cache: "no-cache",
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch rental addresses:", response.status);
+      return [];
+    }
+
+    const result = await response.json();
+    return result.success && result.data ? result.data : [];
+  } catch (error) {
+    console.error("Error fetching rental addresses:", error);
+    return [];
+  }
+}
+
+async function fetchEventTemplates() {
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(
+      `${baseUrl}/api/event-templates?is_template=true`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch templates:", response.status);
+      return [];
+    }
+
+    const result = await response.json();
+    return result.success && result.data ? result.data : [];
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    return [];
+  }
+}
+
+async function fetchEventsFromRentalAddress(
+  rentalAddressId: string | undefined
+) {
+  if (!rentalAddressId) return [];
+
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(
+      `${baseUrl}/api/events/rental/${rentalAddressId}`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch events:", response.status);
+      return [];
+    }
+
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    return [];
+  }
+}
+
+async function fetchRentalAmounts(
+  addressId: string | undefined,
+  isCustomPlan: boolean
+) {
+  if (!addressId || isCustomPlan) return [];
+
+  try {
+    const baseUrl = getBaseUrl();
+    const headersList = await headers();
+    const cookie = headersList.get("cookie") || "";
+
+    const response = await fetch(
+      `${baseUrl}/api/subscriber/address/rental-amounts?rental_address_id=${addressId}`,
+      {
+        headers: { cookie },
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch rental amounts:", response.status);
+      return [];
+    }
+
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("Error fetching rental amounts:", error);
+    return [];
+  }
+}
+
+export default async function CreateEvent({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const propertyId = params.residence;
+  const templateId = params.template;
+
+  // Fetch all data in parallel
+  const [
+    address,
+    businessAddress,
+    templateData,
+    rentalAddresses,
+    templates,
+    eventsFromRentalAddress,
+  ] = await Promise.all([
+    fetchAddress(propertyId),
+    fetchBusinessAddress(),
+    fetchEventTemplate(templateId),
+    fetchRentalAddresses(),
+    fetchEventTemplates(),
+    fetchEventsFromRentalAddress(propertyId),
+  ]);
+
+  // Fetch rental amounts after we have address data
+  const rentalAmounts = await fetchRentalAmounts(
+    propertyId,
+    address?.is_custom_plan || false
+  );
+
+  // Transform template data to initial form data
+  const templateAsInitialData = templateData
     ? {
-        title: templateData.data.title || "",
-        description: templateData.data.description || "",
-        people_count: templateData.data.people_count?.toString() || "",
-        start_time: templateData.data.start_time || "08:00",
-        end_time: templateData.data.end_time || "13:00",
-        excluded_areas: templateData.data.excluded_areas || "",
-        manual_valuation: templateData.data.is_manual_valuation || false,
-        people_names: (templateData.data.people_names || []).map((name) => ({
+        title: templateData.title || "",
+        description: templateData.description || "",
+        people_count: templateData.people_count?.toString() || "",
+        start_time: templateData.start_time || "08:00",
+        end_time: templateData.end_time || "13:00",
+        excluded_areas: templateData.excluded_areas || "",
+        manual_valuation: templateData.is_manual_valuation || false,
+        people_names: (templateData.people_names || []).map((name: string) => ({
           name,
         })),
         defendability_scores: {
@@ -86,115 +277,7 @@ export default function CreateEvent() {
       }
     : undefined;
 
-  const handleTemplateSelect = (templateId: string) => {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('template', templateId);
-    router.push(currentUrl.pathname + currentUrl.search);
-  };
-
-  if (
-    addressError ||
-    businessError ||
-    rentalAddressError ||
-    templateError ||
-    rentalAddressesError ||
-    templatesError
-  ) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="text-red-500 text-lg mb-4">❌</div>
-              <p className="text-gray-600 mb-4">
-                {templateError
-                  ? "Template not found or access denied."
-                  : rentalAddressesError
-                  ? "Failed to load rental addresses."
-                  : templatesError
-                  ? "Failed to load templates."
-                  : "Property not found or access denied."}
-              </p>
-              <Link href="/subscriber/home">
-                <Button className="bg-blue-500 hover:bg-blue-600 text-white">
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If no property is selected, show address selection
-  if (!propertyId) {
-    const availableTemplates = templatesData?.data || [];
-    const hasTemplates = availableTemplates.length > 0;
-    const hasSelectedTemplate = !!templateId;
-
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Back Button */}
-          <div className="mb-6">
-            <Button
-              variant="ghost"
-              className="text-gray-600 hover:text-gray-900"
-              asChild
-            >
-              <Link href="/subscriber/home">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Link>
-            </Button>
-          </div>
-
-          {/* Template Selection - Only show if templates are available and no template is selected */}
-          {hasTemplates && !hasSelectedTemplate && (
-            <div className="mb-6">
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Start with a Template
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Choose a template to pre-fill your event details.
-                    </p>
-                  </div>
-                  <TemplateSelectionModal
-                    templates={availableTemplates}
-                    onTemplateSelect={handleTemplateSelect}
-                  >
-                    <Button variant="outline">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Select Template
-                    </Button>
-                  </TemplateSelectionModal>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <EventForm
-            mode="create"
-            property={undefined}
-            initialData={templateAsInitialData}
-            showSidebar={true}
-            eventsFromRentalAddress={[]}
-            business_address_id={businessAddress?.id || ""}
-            datePrices={[]}
-            isLoading={
-              businessLoading || templateLoading || rentalAddressesLoading || templatesLoading
-            }
-            is_custom_plan={false}
-            rentalAddresses={rentalAddressesData?.data || []}
-          />
-        </div>
-      </div>
-    );
-  }
+  const hasSelectedTemplate = !!templateId;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -213,23 +296,23 @@ export default function CreateEvent() {
           </Button>
         </div>
 
+        {/* Template Selection */}
+        <TemplateSelectionWrapper
+          templates={templates}
+          hasSelectedTemplate={hasSelectedTemplate}
+        />
+
         <EventForm
           mode="create"
           property={address!}
           initialData={templateAsInitialData}
           showSidebar={true}
-          eventsFromRentalAddress={eventsFromRentalAddressData?.data || []}
+          eventsFromRentalAddress={eventsFromRentalAddress}
           business_address_id={businessAddress?.id || ""}
-          datePrices={rentalAmounts || []}
-          isLoading={
-            addressLoading ||
-            businessLoading ||
-            rentalAmountsLoading ||
-            rentalAddressLoading ||
-            templateLoading
-          }
+          datePrices={rentalAmounts}
+          isLoading={false}
           is_custom_plan={address?.is_custom_plan || false}
-          rentalAddresses={rentalAddressesData?.data || []}
+          rentalAddresses={rentalAddresses}
         />
       </div>
     </div>

@@ -82,6 +82,8 @@ export const eventFormSchema = z
         })
       )
       .optional(),
+    currentAction: z.enum(["book", "update", "template", "draft"]).optional(),
+    templateName: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -201,6 +203,8 @@ export const eventFormSubmitSchema = z
         amount: z.number(),
       })
     ),
+    currentAction: z.enum(["book", "update", "template", "draft"]),
+    templateName: z.string(),
   })
   .refine(
     (data) => {

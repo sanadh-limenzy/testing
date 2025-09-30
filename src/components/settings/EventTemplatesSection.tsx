@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Calendar, Plus, Trash2 } from "lucide-react";
 import { useDeleteEventTemplate } from "@/hooks/useEventTemplates";
 import { EventTemplateDatabase } from "@/@types";
+import Link from "next/link";
 
 interface EventTemplatesSectionProps {
   eventTemplates: EventTemplateDatabase[];
@@ -32,15 +33,19 @@ export function EventTemplatesSection({
           <div className="flex items-center space-x-3">
             <Button
               size="sm"
+              asChild
               className="h-10 w-10 p-0 bg-blue-100 hover:bg-blue-200 text-blue-700 border-0"
             >
-              <Plus className="h-4 w-4" />
+              <Link href="/subscriber/templates/create">
+                <Plus className="h-4 w-4" />
+              </Link>
             </Button>
             <Button
+              asChild
               size="sm"
               className="h-10 px-4 bg-blue-100 hover:bg-blue-200 text-blue-700 border-0"
             >
-              See All
+              <Link href="/subscriber/templates">See All</Link>
             </Button>
           </div>
         </div>
@@ -78,13 +83,19 @@ export function EventTemplatesSection({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    <Link
+                      href={`/subscriber/events/create?template=${template.id}`}
                     >
-                      Use Template
-                    </Button>
+                      <Button
+                        asChild
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                      >
+                        <span>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Use This Template
+                        </span>
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
                       variant="outline"
