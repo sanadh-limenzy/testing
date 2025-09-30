@@ -3,6 +3,7 @@ import { RentalAddress } from "@/@types/subscriber";
 import { ProposalDatabase, EventTemplateDatabase, UserNotificationSettings, PlanDatabase } from "@/@types";
 import { cookies } from "next/headers";
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { env } from "@/env";
 
 interface SettingsData {
   rentalAddresses: RentalAddress[];
@@ -17,7 +18,7 @@ interface SettingsData {
 
 async function getSettingsData(cookieStore: ReadonlyRequestCookies): Promise<SettingsData> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/subscriber/settings`, {
+    const response = await fetch(`${env.NEXT_PUBLIC_APP_URL}/api/subscriber/settings`, {
       cache: 'no-store', // Ensure fresh data on each request
       headers: {
         Cookie: cookieStore.toString(),

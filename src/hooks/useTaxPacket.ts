@@ -137,14 +137,14 @@ export function useTaxPacket({ selectedYear = "2025" }: UseTaxPacketOptions = {}
 
   return {
     // Preview
-    generatePreview: previewMutation.mutate,
+    generatePreview: previewMutation.mutateAsync,
     generatePreviewAsync: previewMutation.mutateAsync,
     isLoadingPreview: previewMutation.isPending,
     previewError: previewMutation.error,
 
     // Send
     sendPacket: (email: string, ccOwnEmail: boolean = false) =>
-      sendMutation.mutate({ email, ccOwnEmail }),
+      sendMutation.mutateAsync({ email, ccOwnEmail }),
     sendPacketAsync: (email: string, ccOwnEmail: boolean = false) =>
       sendMutation.mutateAsync({ email, ccOwnEmail }),
     isLoadingSend: sendMutation.isPending,

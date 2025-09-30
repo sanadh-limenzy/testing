@@ -166,7 +166,10 @@ export function EventFormActions({
                   !form.getValues("templateName")?.trim()
                 }
               >
-                {form.formState.isSubmitting ? "Saving..." : "Save Template"}
+                {form.formState.isSubmitting &&
+                form.getValues("currentAction") === "template"
+                  ? "Saving Template..."
+                  : "Save Template"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -182,7 +185,10 @@ export function EventFormActions({
               onSubmit();
             }}
           >
-            Save As Draft
+            {form.formState.isSubmitting &&
+            form.getValues("currentAction") === "draft"
+              ? "Saving As Draft..."
+              : "Save As Draft"}
           </Button>
         )}
         <Button
@@ -196,11 +202,12 @@ export function EventFormActions({
             onSubmit();
           }}
         >
-          {isEditMode
+          {isEditMode && form.getValues("currentAction") === "update"
             ? form.formState.isSubmitting
               ? "Updating Event..."
               : "Update Event"
-            : form.formState.isSubmitting
+            : form.formState.isSubmitting &&
+              form.getValues("currentAction") === "book"
             ? "Booking Event..."
             : "Book Event"}
         </Button>
