@@ -37,7 +37,7 @@ export const createServerSupabaseClient = async () => {
  * Creates a Supabase client with service role privileges for admin operations
  * WARNING: Use only in secure server-side code. Never expose this client to the client-side.
  */
-export const createServiceRoleClient = async () => {
+export const adminSupabaseServerClient = async () => {
   return createClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.SUPABASE_SERVICE_ROLE_KEY,

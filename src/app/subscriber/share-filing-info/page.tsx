@@ -2,8 +2,6 @@ import { ShareFilingInfoForm } from "@/components/share-filing-info/ShareFilingI
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { env } from "@/env";
-
-
 export const dynamic = "force-dynamic";
 
 async function getAccountantEmail() {

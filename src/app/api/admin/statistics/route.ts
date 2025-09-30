@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  createServerSupabaseClient,
+  adminSupabaseServerClient,
+} from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -57,18 +60,22 @@ export async function GET() {
       console.error("Error fetching completed events:", completedEventsError);
     }
 
+    const adminSupbaseClient = await adminSupabaseServerClient();
+
     // Get all auth users once for both user count and signup data
-    const { data: allAuthUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
-    
+    const { data: allAuthUsers, error: authUsersError } =
+      await adminSupbaseClient.auth.admin.listUsers();
+
     if (authUsersError) {
       console.error("Error fetching auth users:", authUsersError);
     }
 
     // Filter for Subscriber users
-    const subscriberUsers = allAuthUsers?.users.filter((user) => {
-      const userType = user.user_metadata?.user_type;
-      return userType === "Subscriber";
-    }) || [];
+    const subscriberUsers =
+      allAuthUsers?.users.filter((user) => {
+        const userType = user.user_metadata?.user_type;
+        return userType === "Subscriber";
+      }) || [];
 
     // Fetch current user count (active subscriber users only)
     const currentUserCount = subscriberUsers.filter((user) => {
@@ -110,7 +117,7 @@ export async function GET() {
 
     // Group signups by date
     const signupsByDate: { [key: string]: number } = {};
-    
+
     // Initialize all dates in the range with 0
     for (let i = 0; i < 30; i++) {
       const date = new Date();
@@ -139,21 +146,23 @@ export async function GET() {
     const now = new Date();
     const thisWeekStart = new Date(now);
     thisWeekStart.setDate(now.getDate() - 7);
-    
+
     const lastWeekStart = new Date(now);
     lastWeekStart.setDate(now.getDate() - 14);
     const lastWeekEnd = new Date(now);
     lastWeekEnd.setDate(now.getDate() - 7);
 
-    const thisWeekSignups = signupData?.filter((profile) => {
-      const createdAt = new Date(profile.created_at);
-      return createdAt >= thisWeekStart && createdAt <= now;
-    }).length || 0;
+    const thisWeekSignups =
+      signupData?.filter((profile) => {
+        const createdAt = new Date(profile.created_at);
+        return createdAt >= thisWeekStart && createdAt <= now;
+      }).length || 0;
 
-    const lastWeekSignups = signupData?.filter((profile) => {
-      const createdAt = new Date(profile.created_at);
-      return createdAt >= lastWeekStart && createdAt < lastWeekEnd;
-    }).length || 0;
+    const lastWeekSignups =
+      signupData?.filter((profile) => {
+        const createdAt = new Date(profile.created_at);
+        return createdAt >= lastWeekStart && createdAt < lastWeekEnd;
+      }).length || 0;
 
     const weekOverWeekChange = thisWeekSignups - lastWeekSignups;
 
