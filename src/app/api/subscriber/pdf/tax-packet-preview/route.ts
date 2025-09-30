@@ -108,6 +108,7 @@ export async function GET(request: Request): Promise<NextResponse<TaxPacketPrevi
           event_invoices (*)
         `
       )
+      .eq("is_draft", false)
       .eq("created_by", user.id)
       .eq("year", selectedYear);
 

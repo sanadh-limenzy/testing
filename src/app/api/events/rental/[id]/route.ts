@@ -54,6 +54,7 @@ export async function GET(
       .from("events")
       .select("*")
       .eq("rental_address_id", id)
+      .eq("is_draft", false)
       .eq("created_by", user.id);
 
     if (error) {

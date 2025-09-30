@@ -41,3 +41,23 @@ export const getInitials = (firstName?: string, lastName?: string) => {
   const last = lastName?.charAt(0)?.toUpperCase() || "";
   return first + last || "U";
 };
+
+/**
+ * Generates a username from an email address
+ * @param email - The email address to generate username from
+ * @returns A username derived from the email
+ */
+export function generateUsernameFromEmail(email: string): string {
+  // Extract the part before @ symbol
+  const emailPrefix = email.split("@")[0];
+  
+  // Remove special characters and convert to lowercase
+  const cleanedUsername = emailPrefix
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .toLowerCase();
+  
+  // Add a random suffix to ensure uniqueness
+  const randomSuffix = Math.floor(Math.random() * 1000);
+  
+  return `${cleanedUsername}${randomSuffix}`;
+}

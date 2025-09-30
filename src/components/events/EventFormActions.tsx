@@ -176,8 +176,11 @@ export function EventFormActions({
             type="button"
             variant="outline"
             className="flex-1"
-            disabled={!isValid || form.formState.isSubmitting}
-            onClick={() => onSubmit()}
+            disabled={form.formState.isSubmitting}
+            onClick={() => {
+              form.setValue("currentAction", "draft");
+              onSubmit();
+            }}
           >
             Save As Draft
           </Button>
@@ -188,7 +191,10 @@ export function EventFormActions({
             isValid ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-400"
           } text-white`}
           disabled={!isValid || form.formState.isSubmitting}
-          onClick={() => onSubmit()}
+          onClick={() => {
+            form.setValue("currentAction", isEditMode ? "update" : "book");
+            onSubmit();
+          }}
         >
           {isEditMode
             ? form.formState.isSubmitting
