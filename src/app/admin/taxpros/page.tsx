@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { ClientsPageClient } from "./ClientsPageClient";
+import { TaxProsPageClient } from "./TaxProsPageClient";
 
-interface Client {
+interface TaxPro {
   id: string;
   firstName: string;
   lastName: string;
@@ -9,16 +9,12 @@ interface Client {
   phone: string;
   phoneCode: string;
   addedOn: string;
-  currentPlan: string;
-  planStatus: "active" | "inactive";
-  referredBy: string;
+  companyPosition?: string;
+  isSuperAdmin: boolean;
+  allowAllAccess: boolean;
   status: "active" | "inactive";
-  businessName?: string;
   userType: "Admin" | "Subscriber" | "Accountant" | "Vendor";
   isActive: boolean;
-  isSubscriptionActive: boolean;
-  planStartDate?: string;
-  planEndDate?: string;
 }
 
 interface PaginationInfo {
@@ -30,23 +26,25 @@ interface PaginationInfo {
   hasPreviousPage: boolean;
 }
 
-interface ClientsResponse {
+interface TaxProsResponse {
   success: boolean;
-  data: Client[];
+  data: TaxPro[];
   pagination: PaginationInfo;
 }
 
-async function getClients(page: number = 1): Promise<ClientsResponse> {
+async function getTaxPros(page: number = 1): Promise<TaxProsResponse> {
   const supabase = await createServerSupabaseClient();
   const limit = 15;
   const offset = (page - 1) * limit;
 
+  // Check if user is authenticated
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
   if (authError || !user) {
     throw new Error("Unauthorized");
   }
 
+  // Check if user is admin
   const { data: userProfile, error: profileError } = await supabase
     .from('user_profile')
     .select('user_type')
@@ -61,7 +59,7 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
   const baseQuery = supabase
     .from('user_profile')
     .select('*', { count: 'exact', head: true })
-    .eq('user_type', 'Subscriber');
+    .eq('user_type', 'Accountant');
 
   // Get total count
   const { count: totalCount, error: countError } = await baseQuery;
@@ -75,23 +73,13 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
     .from('user_profile')
     .select(`
       *,
-      subscriber_profile (
-        business_name,
-        legal_business_name,
-        plan_id,
-        plan_start_date,
-        plan_end_date,
-        is_subscription_active,
-        is_free_subscription_active,
-        plans!fk_subscriber_profile_plan (
-          id,
-          plan_type,
-          title,
-          description
-        )
+      admin_profile (
+        company_position,
+        is_super_admin,
+        allow_all_access
       )
     `)
-    .eq('user_type', 'Subscriber')
+    .eq('user_type', 'Accountant')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -103,31 +91,13 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
 
   // Transform the data
   const transformedUsers = users?.map((user) => {
-    const subscriberProfile = user.subscriber_profile?.[0];
-    const plan = subscriberProfile?.plans;
+    const adminProfile = user.admin_profile?.[0];
     
     const addedOn = new Date(user.created_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
-
-    let currentPlan = "No Plan";
-    if (plan) {
-      if (plan.plan_type === 'Premium') {
-        currentPlan = "Premium (Done For You)";
-      } else if (plan.plan_type === 'Plus') {
-        currentPlan = "Plus (Done With You)";
-      } else if (plan.plan_type === 'Basic') {
-        currentPlan = "Basic (Self-Service)";
-      } else {
-        currentPlan = plan.title || plan.plan_type;
-      }
-    }
-
-    const planStatus = subscriberProfile?.is_subscription_active || subscriberProfile?.is_free_subscription_active 
-      ? "active" 
-      : "inactive";
 
     return {
       id: user.id,
@@ -137,16 +107,12 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
       phone: user.phone || '',
       phoneCode: user.phone_code || '+1',
       addedOn,
-      currentPlan,
-      planStatus,
-      referredBy: user.referred_by || '--',
+      companyPosition: adminProfile?.company_position,
+      isSuperAdmin: adminProfile?.is_super_admin || false,
+      allowAllAccess: adminProfile?.allow_all_access || false,
       status: user.is_active ? 'active' : 'inactive',
-      businessName: subscriberProfile?.business_name || subscriberProfile?.legal_business_name,
       userType: user.user_type,
       isActive: user.is_active,
-      isSubscriptionActive: subscriberProfile?.is_subscription_active || false,
-      planStartDate: subscriberProfile?.plan_start_date,
-      planEndDate: subscriberProfile?.plan_end_date
     };
   }) || [];
 
@@ -154,7 +120,7 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
 
   return {
     success: true,
-    data: transformedUsers as Client[],
+    data: transformedUsers as TaxPro[],
     pagination: {
       page,
       limit,
@@ -166,13 +132,13 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
   };
 }
 
-export default async function AdminClientsPage() {
-  const clientsData = await getClients();
+export default async function AdminTaxProsPage() {
+  const taxProsData = await getTaxPros();
 
   return (
-    <ClientsPageClient 
-      initialClients={clientsData.data}
-      initialPagination={clientsData.pagination}
+    <TaxProsPageClient 
+      initialTaxPros={taxProsData.data}
+      initialPagination={taxProsData.pagination}
     />
   );
 }

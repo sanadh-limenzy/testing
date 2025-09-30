@@ -15,13 +15,13 @@ import { Search, Filter, Loader2 } from "lucide-react";
 interface FilterState {
   addedDate: string;
   status: string;
-  subscriptionPlan: string;
+  accessLevel: string;
   search: string;
   sortBy: string;
   sortOrder: string;
 }
 
-interface ClientsFilterProps {
+interface TaxProsFilterProps {
   onFilterChange: (filters: FilterState) => void;
   onSearch: (searchTerm: string) => void;
   onClear: () => void;
@@ -29,17 +29,17 @@ interface ClientsFilterProps {
   isSearching?: boolean;
 }
 
-export function ClientsFilter({ 
+export function TaxProsFilter({ 
   onFilterChange, 
   onSearch, 
   onClear, 
   initialFilters = {},
   isSearching = false
-}: ClientsFilterProps) {
+}: TaxProsFilterProps) {
   const [filters, setFilters] = useState<FilterState>({
     addedDate: "all",
     status: "all",
-    subscriptionPlan: "all",
+    accessLevel: "all",
     search: "",
     sortBy: "addedOn",
     sortOrder: "desc",
@@ -61,7 +61,7 @@ export function ClientsFilter({
     const clearedFilters = {
       addedDate: "all",
       status: "all",
-      subscriptionPlan: "all",
+      accessLevel: "all",
       search: "",
       sortBy: "addedOn",
       sortOrder: "desc"
@@ -114,20 +114,19 @@ export function ClientsFilter({
               </SelectContent>
             </Select>
 
-            {/* Subscription Plan Filter */}
+            {/* Access Level Filter */}
             <Select
-              value={filters.subscriptionPlan}
-              onValueChange={(value) => handleFilterChange("subscriptionPlan", value)}
+              value={filters.accessLevel}
+              onValueChange={(value) => handleFilterChange("accessLevel", value)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Subscription Plan" />
+                <SelectValue placeholder="Access Level" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                <SelectItem value="basic">Basic</SelectItem>
-                <SelectItem value="plus">Plus</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="premium-done-for-you">Premium (Done For You)</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="full_access">Full Access</SelectItem>
+                <SelectItem value="limited_access">Limited Access</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -143,7 +142,7 @@ export function ClientsFilter({
             )}
             <Input
               type="text"
-              placeholder="Search clients..."
+              placeholder="Search tax pros..."
               value={filters.search}
               onChange={(e) => handleSearch(e.target.value)}
               className={`pl-10 w-full ${isSearching ? 'border-blue-300' : ''}`}

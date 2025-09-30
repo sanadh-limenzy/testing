@@ -10,7 +10,7 @@ import {
 } from "@/html-to-pdf/send-packet";
 import { deleteFileFromS3 } from "@/lib/s3-utils";
 import { generateRandomString, generateUsernameFromEmail } from "@/lib/string-utils";
-import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, adminSupabaseServerClient } from "@/lib/supabase/server";
 import {
   sendTaxPacketRequestSchema,
   subscriberProfileWithReimbursementPlanSchema,
@@ -281,7 +281,7 @@ export async function POST(
       });
 
       // Create user in Supabase Auth using service role client
-      const adminClient = await createServiceRoleClient();
+      const adminClient = await adminSupabaseServerClient();
       const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
         email: accountantEmail.toLowerCase(),
         password: randomPassword,

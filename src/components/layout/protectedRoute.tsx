@@ -33,10 +33,14 @@ export default function ProtectedRoute({ children }: Props) {
     return <>{children}</>;
   }
 
+  // Determine sidebar width based on user type
+  const isAdmin = user?.user_metadata?.user_type === "Admin";
+  const sidebarWidth = isAdmin ? "12rem" : "10rem";
+
   return (
-    <SidebarProvider>
+    <SidebarProvider width={sidebarWidth}>
       <AppSidebar />
-      <div className="w-full">
+      <div className="w-full transition-all duration-300 ease-in-out">
         <Navbar />
         {children}
       </div>

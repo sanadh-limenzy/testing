@@ -11,10 +11,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { ClientStatusSelect } from "./ClientStatusSelect";
-import { ClientsPagination } from "./ClientsPagination";
+import { TaxProStatusSelect } from "./TaxProStatusSelect";
+import { TaxProsPagination } from "./TaxProsPagination";
 
-interface Client {
+interface TaxPro {
   id: string;
   firstName: string;
   lastName: string;
@@ -22,16 +22,12 @@ interface Client {
   phone: string;
   phoneCode: string;
   addedOn: string;
-  currentPlan: string;
-  planStatus: "active" | "inactive";
-  referredBy: string;
+  companyPosition?: string;
+  isSuperAdmin: boolean;
+  allowAllAccess: boolean;
   status: "active" | "inactive";
-  businessName?: string;
   userType: "Admin" | "Subscriber" | "Accountant" | "Vendor";
   isActive: boolean;
-  isSubscriptionActive: boolean;
-  planStartDate?: string;
-  planEndDate?: string;
 }
 
 interface PaginationInfo {
@@ -43,25 +39,25 @@ interface PaginationInfo {
   hasPreviousPage: boolean;
 }
 
-interface ClientsTableProps {
-  initialClients: Client[];
+interface TaxProsTableProps {
+  initialTaxPros: TaxPro[];
   initialPagination: PaginationInfo;
   onPageChange?: (page: number) => void;
   loading?: boolean;
 }
 
-export function ClientsTable({
-  initialClients,
+export function TaxProsTable({
+  initialTaxPros,
   initialPagination,
   onPageChange,
   loading: externalLoading = false,
-}: ClientsTableProps) {
+}: TaxProsTableProps) {
   const router = useRouter();
   const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   
   // Use the data passed from parent instead of internal state
-  const clients = initialClients;
+  const taxPros = initialTaxPros;
   const pagination = initialPagination;
 
   const handlePageChange = (page: number) => {
@@ -73,20 +69,20 @@ export function ClientsTable({
   };
 
   const handleStatusChange = (
-    clientId: string,
+    taxProId: string,
     newStatus: "active" | "inactive"
   ) => {
     // Status changes are now handled by React Query mutations
     // This function is kept for compatibility but doesn't update local state
-    console.log(`Status change for client ${clientId} to ${newStatus}`);
+    console.log(`Status change for tax pro ${taxProId} to ${newStatus}`);
   };
 
-  const handleCopyPhone = async (client: Client) => {
+  const handleCopyPhone = async (taxPro: TaxPro) => {
     toast.dismiss();
-    const phoneNumber = `${client.phoneCode} ${client.phone}`;
+    const phoneNumber = `${taxPro.phoneCode} ${taxPro.phone}`;
     try {
       await navigator.clipboard.writeText(phoneNumber);
-      setCopiedPhoneId(client.id);
+      setCopiedPhoneId(taxPro.id);
       setTimeout(() => setCopiedPhoneId(null), 2000);
       toast.success("Phone number copied!");
     } catch (error) {
@@ -95,11 +91,11 @@ export function ClientsTable({
     }
   };
 
-  const handleCopyEmail = async (client: Client) => {
+  const handleCopyEmail = async (taxPro: TaxPro) => {
     toast.dismiss();
     try {
-      await navigator.clipboard.writeText(client.email);
-      setCopiedEmailId(client.id);
+      await navigator.clipboard.writeText(taxPro.email);
+      setCopiedEmailId(taxPro.id);
       setTimeout(() => setCopiedEmailId(null), 2000);
       toast.success("Email copied!");
     } catch (error) {
@@ -108,8 +104,8 @@ export function ClientsTable({
     }
   };
 
-  const handleRowClick = (clientId: string) => {
-    router.push(`/admin/clients/${clientId}`);
+  const handleRowClick = (taxProId: string) => {
+    router.push(`/admin/taxpros/${taxProId}`);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -130,13 +126,10 @@ export function ClientsTable({
                 Added On
               </th>
               <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Current Plan
+                Position
               </th>
               <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Plan Status
-              </th>
-              <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Referred By
+                Access Level
               </th>
               <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
                 Status
@@ -149,27 +142,27 @@ export function ClientsTable({
           <tbody>
             {externalLoading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-500 ">
+                <td colSpan={6} className="py-8 text-center text-gray-500 ">
                   Loading...
                 </td>
               </tr>
-            ) : clients.length === 0 ? (
+            ) : taxPros.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-500 ">
-                  No clients found
+                <td colSpan={6} className="py-8 text-center text-gray-500 ">
+                  No tax pros found
                 </td>
               </tr>
             ) : (
-              clients.map((client) => (
+              taxPros.map((taxPro) => (
                 <tr 
-                  key={client.id} 
+                  key={taxPro.id} 
                   className="border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleRowClick(client.id)}
+                  onClick={() => handleRowClick(taxPro.id)}
                 >
                   <td className="py-4 px-6">
                     <div>
                       <div className="font-medium text-gray-900 mb-1 ">
-                        {client.firstName} {client.lastName}
+                        {taxPro.firstName} {taxPro.lastName}
                       </div>
                       <div className="flex gap-3">
                         <Tooltip>
@@ -177,11 +170,11 @@ export function ClientsTable({
                             <button
                               onClick={(e) => {
                                 handleActionClick(e);
-                                handleCopyPhone(client);
+                                handleCopyPhone(taxPro);
                               }}
                               className="p-1 hover:bg-gray-100 rounded transition-colors"
                             >
-                              {copiedPhoneId === client.id ? (
+                              {copiedPhoneId === taxPro.id ? (
                                 <Check className="w-3 h-3 text-green-500" />
                               ) : (
                                 <Phone className="w-3 h-3 text-gray-500 hover:text-blue-600 transition-colors" />
@@ -190,9 +183,9 @@ export function ClientsTable({
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
-                              {copiedPhoneId === client.id
+                              {copiedPhoneId === taxPro.id
                                 ? "Phone number copied!"
-                                : `${client.phoneCode} ${client.phone}`}
+                                : `${taxPro.phoneCode} ${taxPro.phone}`}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -202,11 +195,11 @@ export function ClientsTable({
                             <button
                               onClick={(e) => {
                                 handleActionClick(e);
-                                handleCopyEmail(client);
+                                handleCopyEmail(taxPro);
                               }}
                               className="p-1 hover:bg-gray-100 rounded transition-colors"
                             >
-                              {copiedEmailId === client.id ? (
+                              {copiedEmailId === taxPro.id ? (
                                 <Check className="w-3 h-3 text-green-500" />
                               ) : (
                                 <Mail className="w-3 h-3 text-gray-500 hover:text-blue-600 transition-colors" />
@@ -215,9 +208,9 @@ export function ClientsTable({
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
-                              {copiedEmailId === client.id
+                              {copiedEmailId === taxPro.id
                                 ? "Email copied!"
-                                : `${client.email}`}
+                                : `${taxPro.email}`}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -238,20 +231,25 @@ export function ClientsTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-900 whitespace-nowrap">{client.addedOn}</td>
+                  <td className="py-4 px-6 text-gray-900 whitespace-nowrap">{taxPro.addedOn}</td>
                   <td className="py-4 px-6 text-gray-900 whitespace-nowrap">
-                    {client.currentPlan}
+                    {taxPro.companyPosition || '--'}
                   </td>
                   <td className="py-4 px-6 whitespace-nowrap">
-                    <span className="text-green-600 font-medium ">Active</span>
-                  </td>
-                  <td className="py-4 px-6 text-gray-900 whitespace-nowrap">
-                    {client.referredBy}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      taxPro.isSuperAdmin 
+                        ? 'bg-red-100 text-red-800' 
+                        : taxPro.allowAllAccess 
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {taxPro.isSuperAdmin ? 'Super Admin' : taxPro.allowAllAccess ? 'Full Access' : 'Limited Access'}
+                    </span>
                   </td>
                   <td className="py-4 px-6 whitespace-nowrap" onClick={handleActionClick}>
-                    <ClientStatusSelect
-                      clientId={client.id}
-                      currentStatus={client.status}
+                    <TaxProStatusSelect
+                      taxProId={taxPro.id}
+                      currentStatus={taxPro.status}
                       onStatusChange={handleStatusChange}
                     />
                   </td>
@@ -272,7 +270,7 @@ export function ClientsTable({
 
         {pagination.totalPages > 1 && (
           <div className="mt-4">
-            <ClientsPagination
+            <TaxProsPagination
               pagination={pagination}
               onPageChange={handlePageChange}
             />
