@@ -42,10 +42,12 @@ import { EventFormSkeleton } from "@/components/ui/skeleton-loaders";
 import { useUpdateEvent } from "@/hooks/useEvent";
 import { useCreateEvent } from "@/hooks/useEvent";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useCreateEventTemplate } from "@/hooks/useEventTemplates";
 import z from "zod";
 import { differenceInDays } from "date-fns";
 import { useRouter } from "next/navigation";
 import eventUtils from "@/lib/event-utils";
+import { toast } from "sonner";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -79,11 +81,13 @@ export function EventForm({
   const { mutateAsync: updateEvent } = useUpdateEvent();
   const { mutateAsync: createEvent } = useCreateEvent();
   const { mutateAsync: uploadFiles } = useFileUpload();
+  const { mutateAsync: createTemplate } = useCreateEventTemplate();
   const [clearTrigger, setClearTrigger] = useState(false);
   const isReadOnly = mode === "view";
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
   const router = useRouter();
+
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
@@ -100,25 +104,17 @@ export function EventForm({
       manual_valuation: false,
       money_paid_to_personal: false,
       event_documents: [],
-      excluded_areas: "",
+      excluded_areas: property?.is_home_office_deduction ? "Home Office" : "",
       upload_documents: [],
       thumbnails: [],
       upload_thumbnails: [],
       people_names: [],
       daily_amounts: [],
+      currentAction: "book",
+      templateName: "",
     },
     mode: "onBlur",
   });
-
-  const isFormValid = React.useMemo(() => {
-    const errors = form.formState.errors;
-
-    const hasErrors = Object.values(errors).some(
-      (error) => error.message !== undefined
-    );
-
-    return !hasErrors;
-  }, [form.formState.errors]);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -140,7 +136,9 @@ export function EventForm({
         money_paid_to_personal: initialData.money_paid_to_personal || false,
         upload_documents: initialData.upload_documents || [],
         event_documents: initialData.event_documents || [],
-        excluded_areas: initialData.excluded_areas || "",
+        excluded_areas:
+          initialData.excluded_areas ||
+          (property?.is_home_office_deduction ? "Home Office" : ""),
         thumbnails: initialData.thumbnails || [],
         upload_thumbnails: [],
         people_names: initialData.people_names || [],
@@ -153,6 +151,7 @@ export function EventForm({
     property?.avarage_value,
     form,
     business_address_id,
+    property?.is_home_office_deduction,
   ]);
 
   // Watch specific fields instead of all form values
@@ -266,17 +265,18 @@ export function EventForm({
   // Check if total event days exceed 14-day limit
   const exceeds14DayLimit = React.useMemo(() => {
     if (!startDate || !endDate || isEditMode) return false;
-    
-    const newEventDays = differenceInDays(new Date(endDate), new Date(startDate)) + 1;
+
+    const newEventDays =
+      differenceInDays(new Date(endDate), new Date(startDate)) + 1;
     const totalDaysUsed = number_of_event_days_used + newEventDays;
-    
+
     return totalDaysUsed > 14;
   }, [startDate, endDate, number_of_event_days_used, isEditMode]);
 
   // Update form validity to include 14-day limit check
   const isFormValidWithLimit = React.useMemo(() => {
-    return isFormValid && !exceeds14DayLimit;
-  }, [isFormValid, exceeds14DayLimit]);
+    return !exceeds14DayLimit;
+  }, [exceeds14DayLimit]);
 
   const taxSavingsData = React.useMemo(() => {
     const pastDeductions =
@@ -366,6 +366,45 @@ export function EventForm({
 
   const handleSubmit = React.useCallback(
     async (data: EventFormData) => {
+      // Handle template action separately - no need for full validation
+
+      if (data.currentAction === "template") {
+        try {
+          // Filter people names to ensure they're all strings
+          const peopleNames =
+            data.people_names
+              ?.map((p) => p.name)
+              .filter((name): name is string => Boolean(name)) || [];
+
+          // Map form values to template structure
+          const templateData = {
+            draft_name: data.templateName,
+            title: data.title || null,
+            description: data.description || null,
+            people_count: data.people_count
+              ? parseInt(data.people_count)
+              : null,
+            people_names: peopleNames.length > 0 ? peopleNames : null,
+            excluded_areas: data.excluded_areas || null,
+            start_time: data.start_time || null,
+            end_time: data.end_time || null,
+            is_manual_valuation: data.manual_valuation || false,
+            is_used_as_template: true,
+          };
+
+          await createTemplate(templateData);
+          toast.success("Template saved successfully!");
+          return;
+          router.refresh()
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to save template"
+          );
+          return;
+        }
+      }
+
+      // For book/update/draft actions, continue with normal flow
       if (data.residence !== property?.id) {
         console.log("Residence does not match the property");
         data.residence = property?.id || "";
@@ -430,17 +469,20 @@ export function EventForm({
           delete updatedData.upload_thumbnails;
           delete updatedData.upload_documents;
 
-          if (isEditMode) {
+          if (data.currentAction === "update" || isEditMode) {
             await updateEvent({
               eventId: eventId || "",
               eventData: updatedData,
             });
             router.push(`/subscriber/rental-agreement/${eventId}`);
-          } else if (isCreateMode) {
+          } else if (data.currentAction === "book" || isCreateMode) {
             const { data } = await createEvent(updatedData);
             if (data) {
               router.push(`/subscriber/rental-agreement/${data.id}`);
             }
+          } else if (data.currentAction === "draft") {
+            // TODO: Implement draft saving logic
+            toast.info("Draft saving not yet implemented");
           }
           form.reset({
             residence: property?.id || "",
@@ -460,7 +502,9 @@ export function EventForm({
               initialData?.money_paid_to_personal || false,
             upload_documents: initialData?.upload_documents || [],
             event_documents: initialData?.event_documents || [],
-            excluded_areas: initialData?.excluded_areas || "",
+            excluded_areas:
+              initialData?.excluded_areas ||
+              (property?.is_home_office_deduction ? "Home Office" : ""),
             thumbnails: initialData?.thumbnails || [],
             upload_thumbnails: [],
           });
@@ -519,6 +563,7 @@ export function EventForm({
       }
     },
     [
+      createTemplate,
       updateEvent,
       createEvent,
       uploadFiles,
@@ -575,7 +620,7 @@ export function EventForm({
       datePrices,
       rentalAddresses,
       eventsFromRentalAddress,
-      eventId,
+      eventId
     ]
   );
 
@@ -636,7 +681,9 @@ export function EventForm({
                 <EventPhotosSection />
                 <EventFormActions
                   isValid={isFormValidWithLimit}
-                  onSubmit={form.handleSubmit(handleSubmit)}
+                  onSubmit={() => {
+                    form.handleSubmit(handleSubmit)();
+                  }}
                   eventId={eventId}
                 />
               </CardContent>
