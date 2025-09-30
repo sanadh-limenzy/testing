@@ -210,17 +210,17 @@ export default function SubscriberHome() {
 
         {subscriberProfile?.reimbursement_plan?.is_business_signature_done &&
         subscriberProfile.reimbursement_plan.is_signature_done ? null : (
-          <Card className="bg-yellow-100 border-yellow-200 p-4 sm:p-6">
-            <div className="flex items-start space-x-2 mb-3">
+          <Card className="bg-yellow-100 border-yellow-200 p-4 gap-y-0">
+            <div className="flex items-start gap-2">
               <span className="text-yellow-600 font-bold">⚠️</span>
               <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                 Do you currently have a Reimbursement Plan?
               </h2>
             </div>
-            <p className="text-gray-700 mb-4 text-sm sm:text-base">
+            <p className="text-gray-700 text-xs sm:text-sm ml-5 mt-1">
               A reimbursement plan protects you in the event of an audit.
             </p>
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-5 ml-5">
               <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium w-full sm:w-auto">
                 No thanks, I already have one
               </Button>
