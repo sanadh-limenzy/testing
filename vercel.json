@@ -5,5 +5,5 @@
       "memory": 1024
     }
   },
-  "regions": ["iad1", "mum1"]
+  "regions": ["iad1", "bom1"]
 }
