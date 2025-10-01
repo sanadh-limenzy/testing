@@ -16,6 +16,8 @@ export default async function Home() {
   const user_type = user.user_metadata.user_type;
   if (user_type === "Subscriber") {
     redirect("/subscriber/home");
+  } else if (user_type === "Admin") {
+    redirect("/admin/home");
   } else {
     redirect("/accountant/home");
   }
@@ -26,4 +28,4 @@ export default async function Home() {
   //   </div>
   // );
 }
-//  
+//

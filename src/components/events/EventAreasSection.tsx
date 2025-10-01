@@ -93,7 +93,11 @@ export function EventAreasSection({ property }: Props) {
                     : currentAreas
                     ? `${currentAreas}, ${area}`
                     : area;
-                setValue("excluded_areas", newAreas, { shouldValidate: true, shouldDirty: true , shouldTouch: true});
+                setValue("excluded_areas", newAreas, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                });
               }
             }}
           >
@@ -119,7 +123,11 @@ export function EventAreasSection({ property }: Props) {
             ) {
               return;
             }
-            setValue("excluded_areas", newValue, { shouldValidate: true, shouldDirty: true , shouldTouch: true});
+            setValue("excluded_areas", newValue, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            });
           }}
           readOnly={isReadOnly}
           disabled={isReadOnly}

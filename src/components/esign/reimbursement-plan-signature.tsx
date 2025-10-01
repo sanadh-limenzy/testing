@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
 import ReimbursementPlanNamedSignature from "./reimbursement-plan-named-signature";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useSignReimbursementPlan } from "@/hooks/useReimbursementPlan";
 import { Input } from "../ui/input";
 import { FileUpload } from "../ui/file-upload";
@@ -50,7 +50,7 @@ export default function ReimbursementPlanSignature({
   const [isMainDialogOpen, setIsMainDialogOpen] = useState(false);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
 
-  const { user, session } = useAuth();
+  const { user, session } = useAuthContext();
   const signReimbursementPlan = useSignReimbursementPlan();
 
   const [names, setNames] = useState<{

@@ -5,7 +5,6 @@ import { SidebarProvider } from "../ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Navbar } from "./Navbar";
 import { useEffect } from "react";
-import { useIsNotFoundPage } from "../providers/not-found-provider";
 
 const excludedRoutes = ["/auth", "/not-found", "/404"];
 
@@ -17,7 +16,6 @@ export default function ProtectedRoute({ children }: Props) {
   const { user, loading } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
-  const { isNotFoundPage } = useIsNotFoundPage();
 
   useEffect(() => {
     if (!user && !excludedRoutes.includes(pathname) && !loading) {
@@ -29,14 +27,18 @@ export default function ProtectedRoute({ children }: Props) {
     return null;
   }
 
-  if (excludedRoutes.includes(pathname) || isNotFoundPage) {
+  if (excludedRoutes.includes(pathname)) {
     return <>{children}</>;
   }
 
+  // Determine sidebar width based on user type
+  const isAdmin = user?.user_metadata?.user_type === "Admin";
+  const sidebarWidth = isAdmin ? "14rem" : "12rem";
+
   return (
-    <SidebarProvider>
+    <SidebarProvider width={sidebarWidth}>
       <AppSidebar />
-      <div className="w-full">
+      <div className="w-full transition-all duration-300 ease-in-out">
         <Navbar />
         {children}
       </div>

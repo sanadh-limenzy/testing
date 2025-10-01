@@ -45,12 +45,6 @@ class PDFService {
     this.isProduction =
       env.NODE_ENV !== "development" &&
       !env.NEXT_PUBLIC_APP_URL.includes("localhost");
-    console.log("PDF Service: isProduction", this.isProduction);
-    console.log("PDF Service: env.NODE_ENV", env.NODE_ENV);
-    console.log(
-      "PDF Service: env.NEXT_PUBLIC_APP_URL",
-      env.NEXT_PUBLIC_APP_URL
-    );
   }
 
   async initBrowser() {

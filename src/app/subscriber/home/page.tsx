@@ -12,16 +12,14 @@ import {
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import {
-  SubscriberUserResponse,
-} from "@/@types/subscriber";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { EventDatabase } from "@/@types/index";
 import { format, isAfter, startOfDay } from "date-fns";
 import { useRentalProperties } from "@/hooks/useAddress";
+import { useUserData } from "@/hooks/useUserData";
 
 export default function SubscriberHome() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [isExpanded, setIsExpanded] = useState<{ [key: string]: boolean }>({});
 
   const {
@@ -32,25 +30,11 @@ export default function SubscriberHome() {
   } = useRentalProperties();
 
   const {
-    data: subscriberUserData,
+    userData,
     isLoading: isLoadingUser,
     error: userError,
     refetch: refetchUser,
-  } = useQuery<SubscriberUserResponse>({
-    queryKey: ["subscriber-user"],
-    queryFn: async () => {
-      const response = await fetch("/api/subscriber/user");
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Failed to fetch subscriber user data"
-        );
-      }
-
-      return response.json();
-    },
-  });
+  } = useUserData();
 
   const rentalProperties = useMemo(() => {
     rentalPropertiesData?.data.forEach((property) => {
@@ -59,9 +43,8 @@ export default function SubscriberHome() {
     return rentalPropertiesData?.data || [];
   }, [rentalPropertiesData?.data]);
 
-  const userProfile = subscriberUserData?.data?.user_profile;
-  const subscriberProfile =
-    subscriberUserData?.data?.user_profile.subscriber_profile;
+  const userProfile = userData?.userProfile;
+  const subscriberProfile = userData?.subscriberProfile;
 
   // Fetch all events for dynamic calculations
   const {
@@ -225,25 +208,28 @@ export default function SubscriberHome() {
           </Button>
         </div>
 
-        <Card className="bg-yellow-100 border-yellow-200 p-4 sm:p-6">
-          <div className="flex items-start space-x-2 mb-3">
-            <span className="text-yellow-600 font-bold">⚠️</span>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-              Do you currently have a Reimbursement Plan?
-            </h2>
-          </div>
-          <p className="text-gray-700 mb-4 text-sm sm:text-base">
-            A reimbursement plan protects you in the event of an audit.
-          </p>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium w-full sm:w-auto">
-              No thanks, I already have one
-            </Button>
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium w-full sm:w-auto">
-              Sign Reimbursement Plan
-            </Button>
-          </div>
-        </Card>
+        {subscriberProfile?.reimbursement_plan?.is_business_signature_done &&
+        subscriberProfile.reimbursement_plan.is_signature_done ? null : (
+          <Card className="bg-yellow-100 border-yellow-200 p-4 gap-y-0">
+            <div className="flex items-start gap-2">
+              <span className="text-yellow-600 font-bold">⚠️</span>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                Do you currently have a Reimbursement Plan?
+              </h2>
+            </div>
+            <p className="text-gray-700 text-xs sm:text-sm ml-5 mt-1">
+              A reimbursement plan protects you in the event of an audit.
+            </p>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-5 ml-5">
+              <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium w-full sm:w-auto">
+                No thanks, I already have one
+              </Button>
+              <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium w-full sm:w-auto">
+                Sign Reimbursement Plan
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {propertyData.map((property) => (
           <Card key={property.id} className="p-4 sm:p-6">

@@ -86,6 +86,7 @@ export async function GET(
     const { data: events, error: eventsError } = await supabase
       .from("events")
       .select("*")
+      .eq("is_draft", false)
       .eq("rental_address_id", rentalProperty.id);
 
     if (eventsError) {

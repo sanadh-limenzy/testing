@@ -72,6 +72,6 @@ src/
 ## Manual Fallbacks
 
 If automated setup fails:
-- Create `.env.local` manually with Supabase credentials
+- Create `.env` manually with Supabase credentials
 - Run `npm install` to install dependencies
 - Configure Supabase project with authentication enabled

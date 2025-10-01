@@ -23,7 +23,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -33,7 +32,6 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LogoutButton } from "../ui/logout-button";
 import Link from "next/link";
 import { useAuthContext } from "@/contexts/AuthContext";
 import Image from "next/image";
@@ -45,7 +43,7 @@ import { SkeletonList } from "../ui/skeleton-loaders";
 export const sidebarMenuConfig = [
   {
     label: "Dashboard",
-    route: "/admin/dashboard",
+    route: "/admin/home",
     iconType: "Dashboard",
     permissionKey: "", // Assuming no specific permission for Dashboard
   },
@@ -221,12 +219,19 @@ const getNavigationData = (userRole: "Admin" | "Accountant" | "Subscriber") => {
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, loading } = useAuthContext();
   const pathname = usePathname();
-  const { open } = useSidebar();
+  const { open, isMobile, setOpenMobile } = useSidebar();
 
   const userType = user?.user_metadata.user_type;
 
   const userRole = userType as "Admin" | "Accountant" | "Subscriber";
   const navigationData = getNavigationData(userRole);
+
+  // Function to handle mobile menu item clicks and close the sidebar
+  const handleMobileMenuClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar {...props} collapsible="icon">
@@ -234,8 +239,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg">
-              <Link href="/" className="relative block w-full h-full">
-                {open ? (
+              <Link href="/" className="relative block w-full h-full" onClick={handleMobileMenuClick}>
+                {open || isMobile ? (
                   <Image
                     src="/assets/tar-logo.png"
                     alt="The Augusta Rule"
@@ -277,7 +282,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild isActive={isActive}>
-                          <Link href={item.url}>
+                          <Link href={item.url} onClick={handleMobileMenuClick}>
                             {routerItem &&
                               React.createElement(routerItem.icon, {
                                 className: "w-5 h-5",
@@ -296,7 +301,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={item.url}>
+                        <Link href={item.url} onClick={handleMobileMenuClick}>
                           {React.createElement(item.icon)}
                           <span>{item.title}</span>
                         </Link>
@@ -309,24 +314,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <LogoutButton
-                role={user?.user_metadata?.user_type}
-                name={
-                  user?.user_metadata?.first_name ||
-                  user?.user_metadata?.last_name
-                }
-                email={user?.email}
-                isCollapsed={!open}
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

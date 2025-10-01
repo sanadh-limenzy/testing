@@ -42,10 +42,12 @@ import { EventFormSkeleton } from "@/components/ui/skeleton-loaders";
 import { useUpdateEvent } from "@/hooks/useEvent";
 import { useCreateEvent } from "@/hooks/useEvent";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useCreateEventTemplate } from "@/hooks/useEventTemplates";
 import z from "zod";
 import { differenceInDays } from "date-fns";
 import { useRouter } from "next/navigation";
 import eventUtils from "@/lib/event-utils";
+import { toast } from "sonner";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -79,11 +81,13 @@ export function EventForm({
   const { mutateAsync: updateEvent } = useUpdateEvent();
   const { mutateAsync: createEvent } = useCreateEvent();
   const { mutateAsync: uploadFiles } = useFileUpload();
+  const { mutateAsync: createTemplate } = useCreateEventTemplate();
   const [clearTrigger, setClearTrigger] = useState(false);
   const isReadOnly = mode === "view";
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
   const router = useRouter();
+
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
@@ -100,25 +104,17 @@ export function EventForm({
       manual_valuation: false,
       money_paid_to_personal: false,
       event_documents: [],
-      excluded_areas: "",
+      excluded_areas: property?.is_home_office_deduction ? "Home Office" : "",
       upload_documents: [],
       thumbnails: [],
       upload_thumbnails: [],
       people_names: [],
       daily_amounts: [],
+      currentAction: "book",
+      templateName: "",
     },
     mode: "onBlur",
   });
-
-  const isFormValid = React.useMemo(() => {
-    const errors = form.formState.errors;
-
-    const hasErrors = Object.values(errors).some(
-      (error) => error.message !== undefined
-    );
-
-    return !hasErrors;
-  }, [form.formState.errors]);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -140,7 +136,9 @@ export function EventForm({
         money_paid_to_personal: initialData.money_paid_to_personal || false,
         upload_documents: initialData.upload_documents || [],
         event_documents: initialData.event_documents || [],
-        excluded_areas: initialData.excluded_areas || "",
+        excluded_areas:
+          initialData.excluded_areas ||
+          (property?.is_home_office_deduction ? "Home Office" : ""),
         thumbnails: initialData.thumbnails || [],
         upload_thumbnails: [],
         people_names: initialData.people_names || [],
@@ -153,6 +151,7 @@ export function EventForm({
     property?.avarage_value,
     form,
     business_address_id,
+    property?.is_home_office_deduction,
   ]);
 
   // Watch specific fields instead of all form values
@@ -266,17 +265,18 @@ export function EventForm({
   // Check if total event days exceed 14-day limit
   const exceeds14DayLimit = React.useMemo(() => {
     if (!startDate || !endDate || isEditMode) return false;
-    
-    const newEventDays = differenceInDays(new Date(endDate), new Date(startDate)) + 1;
+
+    const newEventDays =
+      differenceInDays(new Date(endDate), new Date(startDate)) + 1;
     const totalDaysUsed = number_of_event_days_used + newEventDays;
-    
+
     return totalDaysUsed > 14;
   }, [startDate, endDate, number_of_event_days_used, isEditMode]);
 
   // Update form validity to include 14-day limit check
   const isFormValidWithLimit = React.useMemo(() => {
-    return isFormValid && !exceeds14DayLimit;
-  }, [isFormValid, exceeds14DayLimit]);
+    return !exceeds14DayLimit;
+  }, [exceeds14DayLimit]);
 
   const taxSavingsData = React.useMemo(() => {
     const pastDeductions =
@@ -366,6 +366,44 @@ export function EventForm({
 
   const handleSubmit = React.useCallback(
     async (data: EventFormData) => {
+      // Handle template action separately - no need for full validation
+
+      if (data.currentAction === "template") {
+        try {
+          // Filter people names to ensure they're all strings
+          const peopleNames =
+            data.people_names
+              ?.map((p) => p.name)
+              .filter((name): name is string => Boolean(name)) || [];
+
+          // Map form values to template structure
+          const templateData = {
+            draft_name: data.templateName,
+            title: data.title || null,
+            description: data.description || null,
+            people_count: data.people_count
+              ? parseInt(data.people_count)
+              : null,
+            people_names: peopleNames.length > 0 ? peopleNames : null,
+            excluded_areas: data.excluded_areas || null,
+            start_time: data.start_time || null,
+            end_time: data.end_time || null,
+            is_manual_valuation: data.manual_valuation || false,
+            is_used_as_template: true,
+          };
+
+          await createTemplate(templateData);
+          toast.success("Template saved successfully!");
+          return router.refresh();
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to save template"
+          );
+          return;
+        }
+      }
+
+      // For book/update/draft actions, continue with normal flow
       if (data.residence !== property?.id) {
         console.log("Residence does not match the property");
         data.residence = property?.id || "";
@@ -375,6 +413,82 @@ export function EventForm({
         console.log("Business address does not match the property");
         data.business_address_id = business_address_id || "";
       }
+
+      // Skip strict validation for drafts
+      const skipValidation = data.currentAction === "draft";
+
+      if (skipValidation) {
+        // For drafts, skip validation and proceed directly
+        try {
+          const updatedData = { ...data };
+
+          if (data.upload_thumbnails && data.upload_thumbnails.length > 0) {
+            const thumbnailUploadResult = await uploadFiles({
+              files: data.upload_thumbnails,
+              folder: "event-thumbnails",
+            });
+
+            if (thumbnailUploadResult.success && thumbnailUploadResult.data) {
+              const newThumbnailUrls =
+                thumbnailUploadResult.data.uploadedFiles.map(
+                  (file) => file.url
+                );
+              updatedData.thumbnails = [
+                ...(data.thumbnails || []),
+                ...newThumbnailUrls,
+              ];
+            }
+          } else {
+            console.log("No thumbnails to upload");
+          }
+
+          if (data.upload_documents && data.upload_documents.length > 0) {
+            const documentUploadResult = await uploadFiles({
+              files: data.upload_documents,
+              folder: "event-documents",
+            });
+
+            if (documentUploadResult.success && documentUploadResult.data) {
+              const newDocuments = documentUploadResult.data.uploadedFiles.map(
+                (file) => ({
+                  id: file.url,
+                  name: file.name,
+                  url: file.url,
+                  type: file.type,
+                  size: file.size,
+                  created_at: new Date().toISOString(),
+                })
+              );
+              updatedData.event_documents = [
+                ...(data.event_documents || []),
+                ...newDocuments,
+              ];
+            }
+          } else {
+            console.log("No documents to upload");
+          }
+
+          delete updatedData.upload_thumbnails;
+          delete updatedData.upload_documents;
+
+          // Save as draft - create event with is_draft: true
+          const draftData = {
+            ...updatedData,
+            is_draft: true,
+          };
+          const result = await createEvent(draftData);
+          if (result.data) {
+            toast.success("Draft saved successfully!");
+            router.push(`/subscriber/home`);
+          }
+          setClearTrigger(true);
+        } catch (error) {
+          console.error("Error uploading files or submitting form:", error);
+        }
+        return;
+      }
+
+      // For book/update actions, validate strictly
       const submitErrors = eventFormSubmitSchema.safeParse(data);
 
       if (submitErrors.success) {
@@ -430,40 +544,26 @@ export function EventForm({
           delete updatedData.upload_thumbnails;
           delete updatedData.upload_documents;
 
-          if (isEditMode) {
+          if (data.currentAction === "update" || isEditMode) {
             await updateEvent({
               eventId: eventId || "",
               eventData: updatedData,
             });
             router.push(`/subscriber/rental-agreement/${eventId}`);
-          } else if (isCreateMode) {
-            const { data } = await createEvent(updatedData);
-            if (data) {
-              router.push(`/subscriber/rental-agreement/${data.id}`);
+          } else if (data.currentAction === "book" || isCreateMode) {
+            const bookData = {
+              ...updatedData,
+              is_draft: false,
+            };
+            const result = await createEvent(bookData);
+            toast.success("Event created successfully!", {
+              description: "Redirecting to rental agreement...",
+              duration: 10000,
+            });
+            if (result.data) {
+              router.push(`/subscriber/rental-agreement/${result.data.id}`);
             }
           }
-          form.reset({
-            residence: property?.id || "",
-            title: initialData?.title || "",
-            start_date: initialData?.start_date || "",
-            end_date: initialData?.end_date || "",
-            start_time: initialData?.start_time || "",
-            end_time: initialData?.end_time || "",
-            people_count: initialData?.people_count || "",
-            rental_amount:
-              initialData?.rental_amount ||
-              property?.avarage_value?.toString() ||
-              "",
-            description: initialData?.description || "",
-            manual_valuation: initialData?.manual_valuation || false,
-            money_paid_to_personal:
-              initialData?.money_paid_to_personal || false,
-            upload_documents: initialData?.upload_documents || [],
-            event_documents: initialData?.event_documents || [],
-            excluded_areas: initialData?.excluded_areas || "",
-            thumbnails: initialData?.thumbnails || [],
-            upload_thumbnails: [],
-          });
           setClearTrigger(true);
         } catch (error) {
           console.error("Error uploading files or submitting form:", error);
@@ -519,6 +619,7 @@ export function EventForm({
       }
     },
     [
+      createTemplate,
       updateEvent,
       createEvent,
       uploadFiles,
@@ -526,7 +627,6 @@ export function EventForm({
       isCreateMode,
       eventId,
       property,
-      initialData,
       form,
       router,
       business_address_id,
@@ -636,7 +736,9 @@ export function EventForm({
                 <EventPhotosSection />
                 <EventFormActions
                   isValid={isFormValidWithLimit}
-                  onSubmit={form.handleSubmit(handleSubmit)}
+                  onSubmit={() => {
+                    form.handleSubmit(handleSubmit)();
+                  }}
                   eventId={eventId}
                 />
               </CardContent>

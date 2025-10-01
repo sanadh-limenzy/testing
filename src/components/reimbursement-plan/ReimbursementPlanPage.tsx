@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import ReimbursementPlanSignature from "@/components/esign/reimbursement-plan-signature";
 import ManualReimbursementPlanUpload from "@/components/events/ManualReimbursementPlanUpload";
 import { useResetReimbursementPlan } from "@/hooks/useReimbursementPlan";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { ProposalDatabase } from "@/@types";
 
 export default function ReimbursementPlanPage({
@@ -17,7 +17,7 @@ export default function ReimbursementPlanPage({
 }) {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
-  const { session } = useAuth();
+  const { session } = useAuthContext();
   const {
     mutateAsync: resetReimbursementPlan,
     isPending: isSwitchingToSystemGenerated,

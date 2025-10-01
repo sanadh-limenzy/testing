@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
 import { useAuth, UseAuthReturn } from "@/hooks/useAuth";
-import ProtectedRoute from "@/components/layout/protectedRoute";
+import ProtectedRoute from "@/components/layout/protected-route";
 
 const AuthContext = createContext<UseAuthReturn | undefined>(undefined);
 

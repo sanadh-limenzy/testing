@@ -66,6 +66,9 @@ export async function GET(
         ),
         rental_address:user_addresses!rental_address_id (
         *
+        ),
+        rental_agreement:proposals!rental_agreement_id(
+        *
         )
       `
       )
@@ -203,6 +206,7 @@ export async function PUT(
         .from("events")
         .select("id, title, start_date, end_date")
         .eq("rental_address_id", eventData.residence)
+        .eq("is_draft", false)
         .eq("created_by", user.id)
         .neq("id", id) // Exclude current event
         .lte("start_date", eventData.end_date)

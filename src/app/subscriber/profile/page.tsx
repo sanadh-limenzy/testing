@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
 import { ProfileNavigation } from "@/components/profile/ProfileNavigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useUserData } from "@/hooks/useUserData";
 import { getInitials } from "@/lib/string-utils";
 import { Edit3 } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { userData } = useUserData();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
