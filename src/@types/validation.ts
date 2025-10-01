@@ -54,8 +54,8 @@ export const eventFormSchema = z
       }, "Rental amount must be a valid number"),
     description: z
       .string()
-      .max(1000, "Description must be no more than 1000 characters")
-      .min(10, "Description must be at least 10 characters"),
+      .max(1000, "Description must be no more than 1000 characters").optional(),
+
     excluded_areas: z.string().optional(),
     manual_valuation: z.boolean().optional(),
     money_paid_to_personal: z.boolean().optional(),
@@ -178,8 +178,7 @@ export const eventFormSubmitSchema = z
     rental_amount: z.string(),
     description: z
       .string()
-      .max(1000, "Description must be no more than 1000 characters")
-      .min(10, "Description must be at least 10 characters"),
+      .max(1000, "Description must be no more than 1000 characters").optional(),
     excluded_areas: z
       .string()
       .min(3, "Excluded areas must be at least 3 characters"),
@@ -268,17 +267,35 @@ export const sendTaxPacketRequestSchema = z.object({
 export const taxDeductionsSchema = z.object({
   totalDeduction: z.number().min(0, "Total deduction must be non-negative"),
   potentialSavings: z.number().min(0, "Potential savings must be non-negative"),
-  totalTaxableAmount: z.number().min(0, "Total taxable amount must be non-negative").optional(),
+  totalTaxableAmount: z
+    .number()
+    .min(0, "Total taxable amount must be non-negative")
+    .optional(),
   daysUsed: z.number().min(0, "Days used must be non-negative").optional(),
-  daysRemaining: z.number().min(0, "Days remaining must be non-negative").optional(),
+  daysRemaining: z
+    .number()
+    .min(0, "Days remaining must be non-negative")
+    .optional(),
 });
 
 export const calculatedTaxDeductionsSchema = z.object({
-  totalDeduction: z.number().min(0, "Total deduction must be non-negative").optional(),
-  totalTaxableAmount: z.number().min(0, "Total taxable amount must be non-negative").optional(),
-  potentialSavings: z.number().min(0, "Potential savings must be non-negative").optional(),
+  totalDeduction: z
+    .number()
+    .min(0, "Total deduction must be non-negative")
+    .optional(),
+  totalTaxableAmount: z
+    .number()
+    .min(0, "Total taxable amount must be non-negative")
+    .optional(),
+  potentialSavings: z
+    .number()
+    .min(0, "Potential savings must be non-negative")
+    .optional(),
   daysUsed: z.number().min(0, "Days used must be non-negative").optional(),
-  daysRemaining: z.number().min(0, "Days remaining must be non-negative").optional(),
+  daysRemaining: z
+    .number()
+    .min(0, "Days remaining must be non-negative")
+    .optional(),
 });
 
 export const compSchema = z.object({
@@ -319,11 +336,13 @@ export const subscriberProfileWithReimbursementPlanSchema = z.object({
   user_id: z.string().min(1, "User ID is required"),
   is_free_subscription_active: z.boolean(),
   is_already_have_reimbursement_plan: z.boolean(),
-  reimbursement_plan: z.object({
-    id: z.string().min(1, "ID is required"),
-    is_signature_done: z.boolean(),
-    signature_doc_url: z.string().url("Invalid URL").nullable(),
-  }).nullable(),
+  reimbursement_plan: z
+    .object({
+      id: z.string().min(1, "ID is required"),
+      is_signature_done: z.boolean(),
+      signature_doc_url: z.string().url("Invalid URL").nullable(),
+    })
+    .nullable(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
@@ -333,14 +352,18 @@ export const taxPacketDataSchema = z.object({
   userName: z.string().min(1, "User name is required"),
   totalEvents: z.number().min(0, "Total events must be non-negative"),
   taxDeductions: calculatedTaxDeductionsSchema,
-  csvLink: z.string().refine(
-    (val) => val === "" || z.string().url().safeParse(val).success,
-    "Invalid CSV link URL"
-  ),
-  reimbursementPlan: z.string().refine(
-    (val) => val === "" || z.string().url().safeParse(val).success,
-    "Invalid reimbursement plan URL"
-  ),
+  csvLink: z
+    .string()
+    .refine(
+      (val) => val === "" || z.string().url().safeParse(val).success,
+      "Invalid CSV link URL"
+    ),
+  reimbursementPlan: z
+    .string()
+    .refine(
+      (val) => val === "" || z.string().url().safeParse(val).success,
+      "Invalid reimbursement plan URL"
+    ),
   eventsArray: z.array(z.any()), // Will be validated separately
   isAlreadyHaveReimbursementPlan: z.boolean(),
 });
@@ -349,50 +372,63 @@ export const taxPacketSaveDataSchema = z.object({
   _events: z.array(z.string().min(1, "Event ID is required")),
   amount: z.number().min(0, "Amount must be non-negative"),
   packetId: z.string().min(1, "Packet ID is required"),
-  eventsCsvLink: z.string().refine(
-    (val) => val === "" || z.string().url().safeParse(val).success,
-    "Invalid CSV link URL"
-  ),
-  pdfPath: z.string().refine(
-    (val) => val === "" || z.string().url().safeParse(val).success,
-    "Invalid PDF path URL"
-  ),
-  reimbursementPlan: z.string().refine(
-    (val) => val === "" || z.string().url().safeParse(val).success,
-    "Invalid reimbursement plan URL"
-  ),
+  eventsCsvLink: z
+    .string()
+    .refine(
+      (val) => val === "" || z.string().url().safeParse(val).success,
+      "Invalid CSV link URL"
+    ),
+  pdfPath: z
+    .string()
+    .refine(
+      (val) => val === "" || z.string().url().safeParse(val).success,
+      "Invalid PDF path URL"
+    ),
+  reimbursementPlan: z
+    .string()
+    .refine(
+      (val) => val === "" || z.string().url().safeParse(val).success,
+      "Invalid reimbursement plan URL"
+    ),
   _createdBy: z.string().min(1, "Created by is required").optional(),
   status: z.string().min(1, "Status is required").optional(),
   rentalAgreement: z.array(z.any()).optional(),
   events: z.array(z.any()).optional(),
-  totalEvents: z.number().min(0, "Total events must be non-negative").optional(),
+  totalEvents: z
+    .number()
+    .min(0, "Total events must be non-negative")
+    .optional(),
   year: z.union([z.string(), z.number()]).optional(),
 });
 
 export const taxPacketPDFResultSchema = z.object({
   success: z.boolean(),
-  data: z.object({
-    pdfPath: z.string().url("Invalid PDF path URL"),
-    csvLink: z.string().url("Invalid CSV link URL"),
-    eventsArray: z.array(z.object({
-      "Event #": z.string(),
-      Residence: z.string(),
-      "Corporate Event": z.string(),
-      Description: z.string(),
-      "Start Time": z.string(),
-      "End Time": z.string(),
-      Duration: z.string(),
-      Amount: z.string(),
-      "Taxable Amount": z.string(),
-      "Add To My Calendar": z.string(),
-      Thumbnails: z.string(),
-      "Number of people attending": z.string(),
-      "Areas not included": z.string(),
-      "Defendability Score": z.string(),
-      Invoice: z.string(),
-      Documents: z.string(),
-    })),
-  }).nullable(),
+  data: z
+    .object({
+      pdfPath: z.string().url("Invalid PDF path URL"),
+      csvLink: z.string().url("Invalid CSV link URL"),
+      eventsArray: z.array(
+        z.object({
+          "Event #": z.string(),
+          Residence: z.string(),
+          "Corporate Event": z.string(),
+          Description: z.string(),
+          "Start Time": z.string(),
+          "End Time": z.string(),
+          Duration: z.string(),
+          Amount: z.string(),
+          "Taxable Amount": z.string(),
+          "Add To My Calendar": z.string(),
+          Thumbnails: z.string(),
+          "Number of people attending": z.string(),
+          "Areas not included": z.string(),
+          "Defendability Score": z.string(),
+          Invoice: z.string(),
+          Documents: z.string(),
+        })
+      ),
+    })
+    .nullable(),
   error: z.string().nullable(),
 });
 
@@ -400,11 +436,19 @@ export const taxPacketPDFResultSchema = z.object({
 export type TaxPacketPreviewQuery = z.infer<typeof taxPacketPreviewQuerySchema>;
 export type SendTaxPacketRequest = z.infer<typeof sendTaxPacketRequestSchema>;
 export type TaxDeductionsValidated = z.infer<typeof taxDeductionsSchema>;
-export type CalculatedTaxDeductionsValidated = z.infer<typeof calculatedTaxDeductionsSchema>;
+export type CalculatedTaxDeductionsValidated = z.infer<
+  typeof calculatedTaxDeductionsSchema
+>;
 export type CompValidated = z.infer<typeof compSchema>;
 export type AirDNAListingValidated = z.infer<typeof airDNAListingSchema>;
 export type MarketCodeValidated = z.infer<typeof marketCodeSchema>;
-export type SubscriberProfileWithReimbursementPlanValidated = z.infer<typeof subscriberProfileWithReimbursementPlanSchema>;
+export type SubscriberProfileWithReimbursementPlanValidated = z.infer<
+  typeof subscriberProfileWithReimbursementPlanSchema
+>;
 export type TaxPacketDataValidated = z.infer<typeof taxPacketDataSchema>;
-export type TaxPacketSaveDataValidated = z.infer<typeof taxPacketSaveDataSchema>;
-export type TaxPacketPDFResultValidated = z.infer<typeof taxPacketPDFResultSchema>;
+export type TaxPacketSaveDataValidated = z.infer<
+  typeof taxPacketSaveDataSchema
+>;
+export type TaxPacketPDFResultValidated = z.infer<
+  typeof taxPacketPDFResultSchema
+>;

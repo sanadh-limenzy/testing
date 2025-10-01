@@ -12,14 +12,14 @@ import {
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { EventDatabase } from "@/@types/index";
 import { format, isAfter, startOfDay } from "date-fns";
 import { useRentalProperties } from "@/hooks/useAddress";
 import { useUserData } from "@/hooks/useUserData";
 
 export default function SubscriberHome() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [isExpanded, setIsExpanded] = useState<{ [key: string]: boolean }>({});
 
   const {
