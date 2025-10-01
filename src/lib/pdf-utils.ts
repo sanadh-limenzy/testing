@@ -8,8 +8,6 @@ import puppeteer, { Browser as PuppeteerBrowser } from "puppeteer";
 import puppeteerCore, { Browser as PuppeteerCoreBrowser } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { format } from "date-fns";
-import fs from "fs";
-import path from "path";
 import { env } from "@/env";
 
 type PDFOptions = {
@@ -156,36 +154,6 @@ class PDFService {
     } finally {
       this.isInitializing = false;
     }
-  }
-
-  async ensureDownloadsDir() {
-    const downloadsDir = path.join(process.cwd(), "public", "downloads");
-    try {
-      await fs.access(downloadsDir, (err) => {
-        if (err) {
-          fs.mkdir(downloadsDir, { recursive: true }, (err) => {
-            if (err) {
-              console.error(
-                "PDF Service: Error creating downloads directory:",
-                err
-              );
-            }
-          });
-        }
-      });
-    } catch (error) {
-      console.error("PDF Service: Error creating downloads directory:", error);
-      await fs.mkdir(downloadsDir, { recursive: true }, (err) => {
-        if (err) {
-          console.error(
-            "PDF Service: Error creating downloads directory:",
-            err
-          );
-        }
-      });
-      console.log("PDF Service: Created downloads directory");
-    }
-    return downloadsDir;
   }
 
   generateFilename(baseName: string) {
@@ -398,19 +366,6 @@ class PDFService {
           );
         }
       }
-    }
-  }
-
-  async getFileSize(filePath: string) {
-    try {
-      const stats = await fs.promises.stat(filePath);
-      return stats.size;
-    } catch (error) {
-      console.warn(
-        "PDF Service: Could not get file size:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-      return 0;
     }
   }
 
