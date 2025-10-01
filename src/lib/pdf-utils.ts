@@ -31,6 +31,8 @@ type PDFOptions = {
   timeout?: number;
 };
 
+chromium.setGraphicsMode = true;
+
 /**
  * PDF generation service with browser instance pooling and optimization
  */
@@ -88,6 +90,9 @@ class PDFService {
       }
 
       if (this.isProduction) {
+        const executablePath = await chromium.executablePath();
+
+        console.log("PDF Service: Executable path:", executablePath);
         this.browser = await puppeteerCore.launch({
           args: [
             ...chromium.args,
@@ -95,6 +100,7 @@ class PDFService {
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
+            "--single-process",
             "--disable-web-security",
             "--disable-features=VizDisplayCompositor",
             "--no-first-run",
@@ -104,7 +110,7 @@ class PDFService {
             "--disable-renderer-backgrounding",
             "--disable-ipc-flooding-protection",
           ],
-          executablePath: await chromium.executablePath(),
+          executablePath: executablePath,
           headless: true,
           browser: "chrome",
         });
