@@ -90,7 +90,7 @@ class PDFService {
       }
 
       if (this.isProduction) {
-        const executablePath = await chromium.executablePath();
+        const executablePath = await chromium.executablePath('/opt/nodejs/node_modules/@sparticuz/chromium/bin');
 
         console.log("PDF Service: Executable path:", executablePath);
         this.browser = await puppeteerCore.launch({
