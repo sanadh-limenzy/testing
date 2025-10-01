@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUpload, FileUploadRef } from "@/components/ui/file-upload";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -29,7 +29,7 @@ export default function ManualRentalAgreementUpload({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileUploadRef = useRef<FileUploadRef>(null);
   const { mutateAsync: uploadFiles } = useFileUpload();
-  const { session } = useAuth();
+  const { session } = useAuthContext();
 
   const handleFileChange = (files: File[]) => {
     if (files.length > 0) {

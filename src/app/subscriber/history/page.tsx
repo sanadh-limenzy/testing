@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useDeleteEvent, useEventsPerRentalAddress } from "@/hooks/useEvent";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -21,7 +20,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { History, Calendar, MapPin, Building } from "lucide-react";
 import type { EventDatabaseWithAllData } from "@/@types/index";
 import Link from "next/link";
-import type { RentalPropertiesResponse } from "@/hooks/useAddress";
+import { useRentalProperties } from "@/hooks/useAddress";
 import { EventCard } from "@/components/history/EventCard";
 
 export default function SubscriberHistory() {
@@ -38,17 +37,7 @@ export default function SubscriberHistory() {
     data: rentalPropertiesData,
     isLoading: isLoadingProperties,
     error: propertiesError,
-  } = useQuery<RentalPropertiesResponse>({
-    queryKey: ["rental-properties"],
-    queryFn: async () => {
-      const response = await fetch("/api/subscriber/address/rental");
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch rental properties");
-      }
-      return response.json();
-    },
-  });
+  } = useRentalProperties();
 
   const {
     data: eventsData,
