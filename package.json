@@ -28,8 +28,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-google-maps/api": "^2.20.7",
-    "@sparticuz/chromium": "^138.0.2",
-    "@sparticuz/chromium-min": "^138.0.2",
+    "@sparticuz/chromium": "^131.0.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.45.7",
     "@t3-oss/env-nextjs": "^0.13.8",
@@ -51,8 +50,7 @@
     "next-themes": "^0.4.6",
     "pg": "^8.13.1",
     "postgres": "^3.4.5",
-    "puppeteer": "^24.22.3",
-    "puppeteer-core": "^24.22.3",
+    "puppeteer-core": "^23.3.0",
     "react": "^19.0.0",
     "react-day-picker": "^9.10.0",
     "react-dom": "^19.0.0",
@@ -78,6 +76,7 @@
     "eslint-config-next": "15.1.0",
     "tailwindcss": "^4.1.13",
     "tw-animate-css": "^1.3.8",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "puppeteer": "^23.3.0"
   }
 }
