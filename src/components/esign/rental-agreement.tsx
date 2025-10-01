@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "../ui/button";
 import NamedSignature from "./named-signature";
-import { useAuthContext } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { Input } from "../ui/input";
 import { FileUpload } from "../ui/file-upload";
@@ -53,7 +53,7 @@ export default function RentalAgreement({ event_id }: { event_id: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
 
-  const { user, session } = useAuthContext();
+  const { user, session } = useAuth();
   const { mutateAsync: uploadFiles } = useFileUpload();
   const router = useRouter();
 

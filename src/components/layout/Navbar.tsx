@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getInitials } from "@/lib/string-utils";
 import { useUserData } from "@/hooks/useUserData";
-import { useAuthContext } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 
 export function Navbar() {
-  const { user, signOut } = useAuthContext();
+  const { user, signOut } = useAuth();
   const { userData } = useUserData();
 
   const handleLogout = async () => {

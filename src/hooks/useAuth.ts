@@ -77,19 +77,6 @@ export interface AuthActions {
 
 export interface UseAuthReturn extends AuthState, AuthActions {}
 
-interface SessionResponse {
-  success: boolean;
-  data?: {
-    user: User;
-    session: Session;
-    profile?: unknown;
-  };
-}
-
-// Global session initialization state to prevent duplicate calls
-let initPromise: Promise<SessionResponse | null> | null = null;
-let isGloballyInitialized = false;
-
 export const useAuth = (): UseAuthReturn => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -99,89 +86,53 @@ export const useAuth = (): UseAuthReturn => {
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
+    let isInitialized = false;
 
     const initializeAuth = async () => {
-      // If already initialized globally, skip
-      if (isGloballyInitialized) {
-        setLoading(false);
-        return;
-      }
-
-      // If a request is already in flight, wait for it
-      if (initPromise) {
-        try {
-          const result = await initPromise;
-          if (mounted && result?.success && result.data) {
-            setSession(result.data.session);
-            setUser(result.data.user);
-          }
-          if (mounted) setLoading(false);
-        } catch (err) {
-          if (mounted) {
-            setError(err as AuthError);
-            setLoading(false);
-          }
-        }
-        return;
-      }
-
-      // Start new initialization request
-      initPromise = fetch("/api/auth/session")
-        .then(async (response) => {
-          if (response.ok) {
-            const result = await response.json();
-            isGloballyInitialized = true;
-            return result;
-          }
-          isGloballyInitialized = true;
-          return null;
-        })
-        .catch((err) => {
-          console.error("Error initializing auth:", err);
-          isGloballyInitialized = true;
-          throw err;
-        });
+      if (isInitialized) return;
+      isInitialized = true;
 
       try {
-        const result = await initPromise;
-        if (mounted && result?.success && result.data) {
-          setSession(result.data.session);
-          setUser(result.data.user);
+        // Get initial session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Error getting session:", error);
+          if (mounted) {
+            setError(error);
+            setLoading(false);
+          }
+          return;
         }
-        if (mounted) setLoading(false);
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
       } catch (err) {
+        console.error("Error initializing auth:", err);
         if (mounted) {
           setError(err as AuthError);
           setLoading(false);
         }
-      } finally {
-        // Clear the promise after completion
-        initPromise = null;
       }
     };
 
     initializeAuth();
 
-    // Only listen for token refresh events (not sign in/out since we handle those via backend)
+    // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      // Only handle token refresh to keep session alive
-      if (event === "TOKEN_REFRESHED") {
-        if (session) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          setSession(session);
-          setUser(user);
-        }
-      }
-      // Handle signed out event from other tabs/windows
-      else if (event === "SIGNED_OUT") {
-        setSession(null);
-        setUser(null);
+    } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        setError(null);
       }
     });
 
@@ -197,42 +148,21 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      // Backend route handles authentication and sets user_role cookie
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      const result = await supabase.auth.signUp({
+        email,
+        password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        const error = { message: result.error, name: "AuthError" } as AuthError;
-        setError(error);
-        return {
-          data: { user: null, session: null },
-          error,
-        };
+      if (result.error) {
+        setError(result.error);
+      }
+      if (result.data.user) {
+        await supabase
+          .from("user_profile")
+          .insert([{ user_id: result.data.user.id }]);
       }
 
-      // Format response to match Supabase format
-      const formattedResult = {
-        data: {
-          user: result.data?.user || null,
-          session: result.data?.session || null,
-        },
-        error: null,
-      };
-
-      // Manually update state since we're not relying on onAuthStateChange for sign in/up
-      if (result.data?.session) {
-        setSession(result.data.session);
-        setUser(result.data.user);
-      }
-
-      return formattedResult;
+      return result;
     } catch (err) {
       const error = err as AuthError;
       setError(error);
@@ -247,42 +177,16 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      // Backend route handles authentication and sets user_role cookie
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      const result = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        const error = { message: result.error, name: "AuthError" } as AuthError;
-        setError(error);
-        return {
-          data: { user: null, session: null },
-          error,
-        };
+      if (result.error) {
+        setError(result.error);
       }
 
-      // Format response to match Supabase format
-      const formattedResult = {
-        data: {
-          user: result.data?.user || null,
-          session: result.data?.session || null,
-        },
-        error: null,
-      };
-
-      // Manually update state since we're not relying on onAuthStateChange for sign in/up
-      if (result.data?.session) {
-        setSession(result.data.session);
-        setUser(result.data.user);
-      }
-
-      return formattedResult;
+      return result;
     } catch (err) {
       const error = err as AuthError;
       setError(error);
@@ -297,23 +201,17 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/signout", {
-        method: "POST",
-      });
+      const result = await supabase.auth.signOut();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        const error = { message: result.error, name: "AuthError" } as AuthError;
-        setError(error);
-        return { error };
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Clear state immediately on successful sign out
+        setUser(null);
+        setSession(null);
       }
 
-      // Clear state immediately on successful sign out
-      setUser(null);
-      setSession(null);
-
-      return { error: null };
+      return result;
     } catch (err) {
       const error = err as AuthError;
       setError(error);
@@ -350,18 +248,16 @@ export const useAuth = (): UseAuthReturn => {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/session");
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.refreshSession();
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setSession(result.data.session);
-          setUser(result.data.user);
-        }
-      } else {
-        const result = await response.json();
-        const error = { message: result.error, name: "AuthError" } as AuthError;
+      if (error) {
         setError(error);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
       }
     } catch (err) {
       setError(err as AuthError);

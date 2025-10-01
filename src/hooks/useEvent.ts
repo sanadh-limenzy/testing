@@ -80,8 +80,6 @@ export function useUpdateEvent() {
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
       queryClient.invalidateQueries({ queryKey: ["rental-agreement"] });
       queryClient.cancelQueries({ queryKey: ["rental-agreement"] });
-      queryClient.invalidateQueries({ queryKey: ["rental-properties"] });
-      queryClient.cancelQueries({ queryKey: ["rental-properties"] });
     },
   });
 }
@@ -117,9 +115,6 @@ export function useDeleteEvent() {
       });
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
       queryClient.refetchQueries({ queryKey: ["events-from-rental-address"] });
-      queryClient.invalidateQueries({ queryKey: ["rental-properties"] });
-      queryClient.cancelQueries({ queryKey: ["rental-properties"] });
-      queryClient.refetchQueries({ queryKey: ["rental-properties"] });
     },
     onMutate: async (eventId: string) => {
       await queryClient.cancelQueries({ queryKey: ["events"] });
@@ -210,11 +205,9 @@ export function useCreateEvent() {
         queryKey: ["events-from-rental-address"],
       });
       queryClient.invalidateQueries({ queryKey: ["rental-property"] });
-      queryClient.invalidateQueries({ queryKey: ["rental-properties"] });
       queryClient.cancelQueries({ queryKey: ["events"] });
       queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
       queryClient.cancelQueries({ queryKey: ["rental-property"] });
-      queryClient.cancelQueries({ queryKey: ["rental-properties"] });
     },
     onError: (error) => {
       console.error("Event creation failed:", error);

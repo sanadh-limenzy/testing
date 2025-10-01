@@ -394,7 +394,8 @@ export function EventForm({
 
           await createTemplate(templateData);
           toast.success("Template saved successfully!");
-          return router.refresh();
+          return;
+          router.refresh()
         } catch (error) {
           toast.error(
             error instanceof Error ? error.message : "Failed to save template"
@@ -481,6 +482,30 @@ export function EventForm({
             toast.success("Draft saved successfully!");
             router.push(`/subscriber/home`);
           }
+          form.reset({
+            residence: property?.id || "",
+            title: initialData?.title || "",
+            start_date: initialData?.start_date || "",
+            end_date: initialData?.end_date || "",
+            start_time: initialData?.start_time || "",
+            end_time: initialData?.end_time || "",
+            people_count: initialData?.people_count || "",
+            rental_amount:
+              initialData?.rental_amount ||
+              property?.avarage_value?.toString() ||
+              "",
+            description: initialData?.description || "",
+            manual_valuation: initialData?.manual_valuation || false,
+            money_paid_to_personal:
+              initialData?.money_paid_to_personal || false,
+            upload_documents: initialData?.upload_documents || [],
+            event_documents: initialData?.event_documents || [],
+            excluded_areas:
+              initialData?.excluded_areas ||
+              (property?.is_home_office_deduction ? "Home Office" : ""),
+            thumbnails: initialData?.thumbnails || [],
+            upload_thumbnails: [],
+          });
           setClearTrigger(true);
         } catch (error) {
           console.error("Error uploading files or submitting form:", error);
@@ -556,14 +581,34 @@ export function EventForm({
               is_draft: false,
             };
             const result = await createEvent(bookData);
-            toast.success("Event created successfully!", {
-              description: "Redirecting to rental agreement...",
-              duration: 10000,
-            });
             if (result.data) {
               router.push(`/subscriber/rental-agreement/${result.data.id}`);
             }
           }
+          form.reset({
+            residence: property?.id || "",
+            title: initialData?.title || "",
+            start_date: initialData?.start_date || "",
+            end_date: initialData?.end_date || "",
+            start_time: initialData?.start_time || "",
+            end_time: initialData?.end_time || "",
+            people_count: initialData?.people_count || "",
+            rental_amount:
+              initialData?.rental_amount ||
+              property?.avarage_value?.toString() ||
+              "",
+            description: initialData?.description || "",
+            manual_valuation: initialData?.manual_valuation || false,
+            money_paid_to_personal:
+              initialData?.money_paid_to_personal || false,
+            upload_documents: initialData?.upload_documents || [],
+            event_documents: initialData?.event_documents || [],
+            excluded_areas:
+              initialData?.excluded_areas ||
+              (property?.is_home_office_deduction ? "Home Office" : ""),
+            thumbnails: initialData?.thumbnails || [],
+            upload_thumbnails: [],
+          });
           setClearTrigger(true);
         } catch (error) {
           console.error("Error uploading files or submitting form:", error);
@@ -627,6 +672,7 @@ export function EventForm({
       isCreateMode,
       eventId,
       property,
+      initialData,
       form,
       router,
       business_address_id,
@@ -675,7 +721,7 @@ export function EventForm({
       datePrices,
       rentalAddresses,
       eventsFromRentalAddress,
-      eventId,
+      eventId
     ]
   );
 
