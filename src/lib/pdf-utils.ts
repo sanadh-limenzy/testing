@@ -1,14 +1,23 @@
 /**
  * @fileoverview Efficient PDF generation service using @sparticuz/chromium
  * @author v0-theaugustarule-express
- * @version 1.0.0
+ * @version 1.0.2
  */
 
 import puppeteer, { Browser as PuppeteerBrowser } from "puppeteer";
-import puppeteerCore, { Browser as PuppeteerCoreBrowser } from "puppeteer-core";
+import puppeteerCore, { PaperFormat, Browser as PuppeteerCoreBrowser } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { format } from "date-fns";
+import fs from "fs";
+import path from "path";
 import { env } from "@/env";
+
+// IMPORTANT: Configure chromium for serverless
+// Disable graphics mode for better performance in serverless
+if (process.env.NODE_ENV === 'production') {
+  chromium.setGraphicsMode = false;
+  chromium.setHeadlessMode = true;
+}
 
 type PDFOptions = {
   filename?: string;
@@ -28,8 +37,6 @@ type PDFOptions = {
   displayHeaderFooter?: boolean;
   timeout?: number;
 };
-
-chromium.setGraphicsMode = true;
 
 /**
  * PDF generation service with browser instance pooling and optimization
@@ -88,31 +95,76 @@ class PDFService {
       }
 
       if (this.isProduction) {
-        const executablePath = await chromium.executablePath('/opt/nodejs/node_modules/@sparticuz/chromium/bin');
-
-        console.log("PDF Service: Executable path:", executablePath);
-        this.browser = await puppeteerCore.launch({
+        console.log("PDF Service: Launching browser in production mode...");
+        
+        // For Vercel deployment, chromium will automatically download and decompress
+        // the binary to /tmp at runtime if needed
+        let executablePath: string;
+        
+        try {
+          // This will download/decompress chromium if needed
+          executablePath = await chromium.executablePath();
+          console.log("PDF Service: Chromium executable path:", executablePath);
+        } catch (pathError) {
+          console.error("PDF Service: Failed to get executable path:", pathError);
+          
+          // Fallback: Try to use the system-installed chromium if available
+          // This is for environments that have chromium pre-installed
+          const fallbackPaths = [
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome',
+            '/opt/google/chrome/chrome',
+          ];
+          
+          let foundPath = null;
+          for (const tryPath of fallbackPaths) {
+            try {
+              await fs.promises.access(tryPath, fs.constants.X_OK);
+              foundPath = tryPath;
+              console.log(`PDF Service: Found chromium at ${tryPath}`);
+              break;
+            } catch {}
+          }
+          
+          if (!foundPath) {
+            throw new Error("Could not find chromium executable. Please ensure @sparticuz/chromium is properly installed.");
+          }
+          
+          executablePath = foundPath;
+        }
+        
+        // Launch options optimized for Vercel
+        const launchOptions = {
           args: [
             ...chromium.args,
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--single-process",
-            "--disable-web-security",
-            "--disable-features=VizDisplayCompositor",
-            "--no-first-run",
-            "--no-zygote",
-            "--disable-background-timer-throttling",
-            "--disable-backgrounding-occluded-windows",
-            "--disable-renderer-backgrounding",
-            "--disable-ipc-flooding-protection",
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--single-process', // Important for serverless
+            '--no-zygote',
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-accelerated-2d-canvas',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--font-render-hinting=none', // Improves font rendering
           ],
           executablePath: executablePath,
-          headless: true,
-          browser: "chrome",
-        });
+          headless: chromium.headless ?? true,
+          ignoreDefaultArgs: ['--disable-extensions'],
+          defaultViewport: chromium.defaultViewport || {
+            width: 1200,
+            height: 1600,
+          },
+        };
+
+        this.browser = await puppeteerCore.launch(launchOptions);
       } else {
+        // Development mode
         this.browser = await puppeteer.launch({
           headless: true,
           args: [
@@ -156,6 +208,17 @@ class PDFService {
     }
   }
 
+  async ensureDownloadsDir() {
+    const downloadsDir = path.join(process.cwd(), "public", "downloads");
+    try {
+      await fs.promises.access(downloadsDir, fs.constants.W_OK);
+    } catch {
+      console.log("PDF Service: Creating downloads directory...");
+      await fs.promises.mkdir(downloadsDir, { recursive: true });
+    }
+    return downloadsDir;
+  }
+
   generateFilename(baseName: string) {
     const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
     const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9-_]/g, "_");
@@ -164,22 +227,6 @@ class PDFService {
 
   /**
    * Generate PDF from HTML content (in memory)
-   * @example
-   * // Generate PDF in memory only
-   * const result = await pdfService.generatePDF(htmlContent, {
-   *   filename: 'rental-agreement',
-   *   orientation: 'portrait',
-   *   paperSize: 'A4'
-   * });
-   * console.log(`PDF buffer size: ${result.buffer.length} bytes`);
-   *
-   * @example
-   * // Generate PDF and save to file (for direct downloads)
-   * const result = await pdfService.generatePDF(htmlContent, {
-   *   filename: 'rental-agreement',
-   *   saveToFile: true
-   * });
-   * console.log(`PDF saved to: ${result.filePath}`);
    */
   async generatePDF(
     html: string,
@@ -187,7 +234,7 @@ class PDFService {
       displayHeaderFooter: false,
       filename: "",
       orientation: "portrait",
-      paperSize: this.isProduction ? "a4" : "A4",
+      paperSize: "a4",
       margins: {
         top: "0.5in",
         right: "0.25in",
@@ -211,7 +258,7 @@ class PDFService {
     const {
       filename,
       orientation = "portrait",
-      paperSize = this.isProduction ? "a4" : "A4",
+      paperSize = "a4",
       margins = {
         top: "0.5in",
         right: "0.25in",
@@ -239,7 +286,7 @@ class PDFService {
 
         page = await browser.newPage();
 
-        // Optimize page settings
+        // Optimize page settings for serverless
         await page.setDefaultNavigationTimeout(timeout);
         await page.setDefaultTimeout(timeout);
 
@@ -256,7 +303,7 @@ class PDFService {
           timeout: timeout,
         });
 
-        // Wait a bit more for any dynamic content using Promise-based delay
+        // Wait a bit more for any dynamic content
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Break out of retry loop if successful
@@ -316,14 +363,17 @@ class PDFService {
       const generatedFilename = this.generateFilename(filename);
 
       if (page) {
+        // Normalize paper size to lowercase for consistency
+        const normalizedPaperSize = paperSize.toLowerCase() as PaperFormat;
+        
         const pdfData = await page.pdf({
-          format: paperSize,
+          format: normalizedPaperSize,
           landscape: orientation === "landscape",
           printBackground: printBackground,
           margin: margins,
           displayHeaderFooter: displayHeaderFooter,
-          preferCSSPageSize: true, // Respect CSS page size
-          omitBackground: false, // Include background
+          preferCSSPageSize: true,
+          omitBackground: false,
         });
 
         // Ensure we have a proper Node.js Buffer
@@ -369,6 +419,19 @@ class PDFService {
     }
   }
 
+  async getFileSize(filePath: string) {
+    try {
+      const stats = await fs.promises.stat(filePath);
+      return stats.size;
+    } catch (error) {
+      console.warn(
+        "PDF Service: Could not get file size:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      return 0;
+    }
+  }
+
   async close() {
     if (this.browser) {
       try {
@@ -385,5 +448,16 @@ class PDFService {
 
 // Create singleton instance
 const pdfService = new PDFService();
+
+// Clean up on process exit (serverless function termination)
+if (typeof process !== 'undefined') {
+  process.on('exit', () => {
+    pdfService.close().catch(() => {});
+  });
+  
+  process.on('SIGTERM', () => {
+    pdfService.close().catch(() => {});
+  });
+}
 
 export { pdfService, PDFService };
