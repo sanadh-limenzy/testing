@@ -40,15 +40,14 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const handlePasswordReset = async () => {
-      // Verify user authentication with Supabase Auth server
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getSession();
 
       if (error) {
         setFormError("root", { message: "Invalid or expired reset link" });
         return;
       }
 
-      if (!user) {
+      if (!data.session) {
         setFormError("root", { message: "No active session found" });
         return;
       }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuthContext } from "@/contexts/AuthContext";
+import { useAuth } from "./useAuth";
 import {
   AccountantProfile,
   SubscriberProfile,
@@ -56,7 +56,7 @@ export interface UserData {
  * - Query key: `["user-data"]`
  */
 export const useUserData = (enabled: boolean = true) => {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const query = useQuery<UserData>({
     queryKey: ["user-data"],
     queryFn: async () => {

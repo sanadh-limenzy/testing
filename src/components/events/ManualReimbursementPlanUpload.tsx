@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUpload, FileUploadRef } from "@/components/ui/file-upload";
-import { useAuthContext } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useManualReimbursementPlanUpload } from "@/hooks/useReimbursementPlan";
 import {
   Dialog,
@@ -24,7 +24,7 @@ export default function ManualReimbursementPlanUpload({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileUploadRef = useRef<FileUploadRef>(null);
-  const { session } = useAuthContext();
+  const { session } = useAuth();
   const { mutateAsync: uploadManualPlan, isPending: isUploading } = useManualReimbursementPlanUpload();
 
   const handleFileChange = (files: File[]) => {

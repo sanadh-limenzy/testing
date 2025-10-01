@@ -1,7 +1,7 @@
 import { StatisticsCard } from "@/components/admin/StatisticsCard";
 import { SignupChart } from "@/components/admin/SignupChart";
 import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { env } from "@/env";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ interface AdminStatistics {
   weekOverWeekChange: number;
 }
 
-async function getAdminStatistics(): Promise<AdminStatistics | null | "Forbidden"> {
+async function getAdminStatistics(): Promise<AdminStatistics | null> {
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore
@@ -41,7 +41,7 @@ async function getAdminStatistics(): Promise<AdminStatistics | null | "Forbidden
         redirect("/auth");
       }
       if (response.status === 403) {
-        return "Forbidden";
+        redirect("/");
       }
       console.error("Failed to fetch admin statistics:", response.statusText);
       return null;
@@ -57,10 +57,6 @@ async function getAdminStatistics(): Promise<AdminStatistics | null | "Forbidden
 
 export default async function AdminHomePage() {
   const statistics = await getAdminStatistics();
-
-  if(statistics === "Forbidden") {
-    return notFound();
-  }
 
   if (!statistics) {
     return (

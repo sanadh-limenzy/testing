@@ -35,7 +35,7 @@ export default function ProtectedRoute({ children }: Props) {
 
   // Determine sidebar width based on user type
   const isAdmin = user?.user_metadata?.user_type === "Admin";
-  const sidebarWidth = isAdmin ? "14rem" : "12rem";
+  const sidebarWidth = isAdmin ? "12rem" : "10rem";
 
   return (
     <SidebarProvider width={sidebarWidth}>

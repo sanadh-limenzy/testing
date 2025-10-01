@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { NotFoundProvider } from "./not-found-provider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,9 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <NotFoundProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </NotFoundProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

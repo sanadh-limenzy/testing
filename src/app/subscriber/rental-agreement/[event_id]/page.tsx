@@ -36,5 +36,7 @@ export default async function Page({
     throw new Error(`Failed to fetch rental agreement: ${response.statusText}`);
   }
 
+  console.dir(rentalAgreementData, { depth: null });
+
   return <RentalAgreementPage rentalAgreementData={rentalAgreementData.proposal} />;
 }
