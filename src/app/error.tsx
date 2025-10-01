@@ -16,7 +16,10 @@ interface ErrorState {
   error?: Error;
 }
 
-export default class ErrorBoundary extends React.Component<ErrorProps, ErrorState> {
+export default class ErrorBoundary extends React.Component<
+  ErrorProps,
+  ErrorState
+> {
   constructor(props: ErrorProps) {
     super(props);
     this.state = { hasError: false };
@@ -30,7 +33,7 @@ export default class ErrorBoundary extends React.Component<ErrorProps, ErrorStat
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log the error to an error reporting service
     console.error("Error caught by ErrorBoundary:", error, errorInfo);
-    
+
     // You can also log the error to an external service here
     // Example: logErrorToService(error, errorInfo);
   }
@@ -43,9 +46,12 @@ export default class ErrorBoundary extends React.Component<ErrorProps, ErrorStat
   render() {
     if (this.state.hasError) {
       // Check if the error is Forbidden (403) - show 404 page
-      const isForbidden = this.state.error?.message?.includes('Forbidden') || 
-                         this.state.error?.message?.includes('403') ||
-                         this.state.error?.message?.includes('Unauthorized');
+      const isForbidden =
+        this.state.error?.message?.includes("Forbidden") ||
+        this.state.error?.message?.includes("403") ||
+        this.state.error?.message?.includes("Unauthorized");
+
+      console.log("isForbidden", isForbidden);
 
       if (isForbidden) {
         return (
@@ -66,7 +72,9 @@ export default class ErrorBoundary extends React.Component<ErrorProps, ErrorStat
 
               {/* 404 Message */}
               <p className="text-gray-600 mb-6">
-                Sorry, we couldn&apos;t find the page you&apos;re looking for. This page may have been moved or you don&apos;t have permission to access it.
+                Sorry, we couldn&apos;t find the page you&apos;re looking for.
+                This page may have been moved or you don&apos;t have permission
+                to access it.
               </p>
 
               {/* Action Buttons */}
@@ -104,13 +112,16 @@ export default class ErrorBoundary extends React.Component<ErrorProps, ErrorStat
 
             {/* Error Message */}
             <p className="text-gray-600 mb-6">
-              We encountered an unexpected error. This has been logged and our team will look into it.
+              We encountered an unexpected error. This has been logged and our
+              team will look into it.
             </p>
 
             {/* Error Details (only in development) */}
             {process.env.NODE_ENV === "development" && this.state.error && (
               <div className="mb-6 p-4 bg-gray-100 rounded-md text-left">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Error Details:</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  Error Details:
+                </h3>
                 <pre className="text-xs text-gray-600 whitespace-pre-wrap break-words">
                   {this.state.error.message}
                 </pre>
@@ -136,7 +147,7 @@ export default class ErrorBoundary extends React.Component<ErrorProps, ErrorStat
                 <RefreshCw className="w-4 h-4" />
                 Try Again
               </Button>
-              
+
               <Button
                 variant="outline"
                 asChild

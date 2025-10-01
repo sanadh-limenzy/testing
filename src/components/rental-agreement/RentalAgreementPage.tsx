@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RentalAgreementSkeleton } from "@/components/skeletons/RentalAgreementSkeleton";
 import { ProposalDatabase } from "@/@types";
+import { toast } from "sonner";
 
 interface RentalAgreementPageProps {
   rentalAgreementData: ProposalDatabase;
@@ -32,7 +33,7 @@ export default function RentalAgreementPage({
   };
 
   const handleGoBack = () => {
-    router.back();
+    router.push("/subscriber/events/edit/" + rentalAgreement.event_id);
   };
 
   const handleUseSystemGenerated = async () => {
@@ -46,6 +47,10 @@ export default function RentalAgreementPage({
       console.error("Error switching to system generated agreement:", error);
     }
   };
+
+  useEffect(() => {
+    toast.dismiss();
+  }, [rentalAgreement?.signature_doc_url]);
 
   if (switchToSystemGeneratedMutation.isPending) {
     return <RentalAgreementSkeleton />;

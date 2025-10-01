@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 const userProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -29,7 +29,7 @@ export const UserProfileStep: React.FC<UserProfileStepProps> = ({
   loading = false,
   error,
 }) => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [isEmailFetched, setIsEmailFetched] = useState(false);
 
   const {

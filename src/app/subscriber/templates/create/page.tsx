@@ -30,7 +30,6 @@ const templateFormSchema = z.object({
     .max(100, "Template name must be no more than 100 characters"),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be no more than 1000 characters"),
   people_count: z
     .string()
