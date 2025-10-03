@@ -17,8 +17,17 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is admin
+    const { data: userProfile } = await supabase
+      .from('user_profile')
+      .select('user_type')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = userProfile?.user_type === 'Admin';
+
     // Get the event with rental agreement details
-    const { data: event, error: eventError } = await supabase
+    let eventQuery = supabase
       .from("events")
       .select(
         `
@@ -31,9 +40,14 @@ export async function POST(
         )
       `
       )
-      .eq("id", id)
-      .eq("created_by", user.id)
-      .single();
+      .eq("id", id);
+
+    // Only filter by created_by if user is not an admin
+    if (!isAdmin) {
+      eventQuery = eventQuery.eq("created_by", user.id);
+    }
+
+    const { data: event, error: eventError } = await eventQuery.single();
 
     if (eventError || !event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
@@ -74,14 +88,20 @@ export async function POST(
     }
 
     // Update event to completed
-    const { error: updateError } = await supabase
+    let updateQuery = supabase
       .from("events")
       .update({
         is_completed_event: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id)
-      .eq("created_by", user.id);
+      .eq("id", id);
+
+    // Only filter by created_by if user is not an admin
+    if (!isAdmin) {
+      updateQuery = updateQuery.eq("created_by", user.id);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       console.error("Error completing event:", updateError);

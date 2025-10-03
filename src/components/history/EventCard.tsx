@@ -73,21 +73,7 @@ export function EventCard({
     // Event end date must have passed
     const endDate = new Date(event.end_date);
     const now = new Date();
-
-    console.log("event.end_date: ", event.end_date);
-    console.log("now: ", new Date());
-
-    console.log("event.is_completed_event: ", event.is_completed_event);
-    console.log("event.rental_agreement: ", event.rental_agreement);
-    console.log(
-      "event.rental_agreement.is_signature_done: ",
-      event.rental_agreement?.is_signature_done
-    );
-    console.log(
-      "event.rental_agreement.is_business_signature_done: ",
-      event.rental_agreement?.is_business_signature_done
-    );
-
+    
     if (endDate > now) return false;
 
     // Rental agreement must be signed

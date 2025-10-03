@@ -46,8 +46,17 @@ export async function GET(
       );
     }
 
+    // Check if user is admin
+    const { data: userProfile } = await supabase
+      .from('user_profile')
+      .select('user_type')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = userProfile?.user_type === 'Admin';
+
     // Fetch the event with related data including rental address
-    const { data: event } = await supabase
+    let eventQuery = supabase
       .from("events")
       .select(
         `
@@ -72,9 +81,14 @@ export async function GET(
         )
       `
       )
-      .eq("id", id)
-      .eq("created_by", user.id)
-      .single();
+      .eq("id", id);
+
+    // Only filter by created_by if user is not an admin
+    if (!isAdmin) {
+      eventQuery = eventQuery.eq("created_by", user.id);
+    }
+
+    const { data: event } = await eventQuery.single();
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
