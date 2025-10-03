@@ -97,7 +97,7 @@ export async function GET(
     const { data: residence, error: residenceError } = await supabase
       .from("residences")
       .select("*")
-      .eq("address_id", event.rental_address.mongo_id)
+      .eq("address_id", event.rental_address.id)
       .single();
     if (residenceError) {
       console.error("Error fetching residence:", residenceError);

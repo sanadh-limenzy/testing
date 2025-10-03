@@ -104,7 +104,7 @@ export async function GET(
     const { data: residence, error: residencesError } = await supabase
       .from("residences")
       .select("*")
-      .eq("address_id", rentalProperty?.mongo_id)
+      .eq("address_id", rentalProperty?.id)
       .single();
     if (residencesError) {
       console.error(

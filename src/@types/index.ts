@@ -606,3 +606,6 @@ export interface PromoCodeUsedBy {
   user_id: string;
   used_at?: string;
 }
+
+// Export custom plans types
+export * from './custom-plans';
