@@ -1,5 +1,5 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function GET(
   request: NextRequest,
@@ -7,110 +7,136 @@ export async function GET(
 ) {
   try {
     const supabase = await createServerSupabaseClient();
-    
-    // Check if user is authenticated and is an admin
+    const { id } = await params;
+
+    // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
-      .from("user_profile")
-      .select("user_type")
-      .eq("id", user.id)
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profile')
+      .select('user_type')
+      .eq('id', user.id)
       .single();
 
-    if (profileError || !profile || profile.user_type !== "Admin") {
-      return NextResponse.json(
-        { success: false, error: "Forbidden" },
-        { status: 403 }
-      );
+    if (profileError || !userProfile || userProfile.user_type !== 'Admin') {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const clientId = (await params).id;
-
-    // Fetch client data with related information
-    const { data: client, error: clientError } = await supabase
-      .from("user_profile")
+    // Fetch the specific client
+    const { data: clientData, error: clientError } = await supabase
+      .from('user_profile')
       .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        phone_code,
-        created_at,
-        user_type,
-        is_active,
-        referred_by
+        *,
+        subscriber_profile (
+          business_name,
+          legal_business_name,
+          plan_id,
+          plan_start_date,
+          plan_end_date,
+          is_subscription_active,
+          is_free_subscription_active,
+          accountant_id,
+          plans!fk_subscriber_profile_plan (
+            id,
+            plan_type,
+            title,
+            description
+          ),
+          accountant_profile (
+            user_profile (
+              first_name,
+              last_name,
+              email
+            )
+          )
+        )
       `)
-      .eq("id", clientId)
+      .eq('id', id)
+      .eq('user_type', 'Subscriber')
       .single();
 
-    if (clientError || !client) {
+    if (clientError || !clientData) {
+      console.error("Error fetching client:", clientError);
       return NextResponse.json(
-        { success: false, error: "Client not found" },
+        { error: "Client not found" },
         { status: 404 }
       );
     }
 
-    // Get subscriber profile data if user is a subscriber
-    const { data: subscriberProfile, error: subError } = await supabase
-      .from("subscriber_profile")
-      .select(`
-        business_name,
-        plan_start_date,
-        plan_end_date,
-        is_subscription_active,
-        plan_id
-      `)
-      .eq("user_id", clientId)
-      .single();
+    // Transform the data
+    const subscriberProfile = clientData.subscriber_profile?.[0];
+    const plan = subscriberProfile?.plans;
+    const accountantProfile = subscriberProfile?.accountant_profile?.[0];
+    
+    const addedOn = new Date(clientData.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
 
-    if (subError) {
-      console.error("Error fetching subscriber profile:", subError);
+    let currentPlan = "No Plan";
+    if (plan) {
+      if (plan.plan_type === 'Premium') {
+        currentPlan = "Premium (Done For You)";
+      } else if (plan.plan_type === 'Plus') {
+        currentPlan = "Plus (Done With You)";
+      } else if (plan.plan_type === 'Basic') {
+        currentPlan = "Basic (Self-Service)";
+      } else {
+        currentPlan = plan.title || plan.plan_type;
+      }
     }
 
-    // Format the response
-    const formattedClient = {
-      id: client.id,
-      firstName: client.first_name || "",
-      lastName: client.last_name || "",
-      email: client.email || "",
-      phone: client.phone || "",
-      phoneCode: client.phone_code || "",
-      addedOn: client.created_at ? new Date(client.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }) : "",
-      currentPlan: "Basic", // Will be updated when we have proper plan data
-      planStatus: subscriberProfile?.is_subscription_active ? "active" : "inactive",
-      referredBy: client.referred_by || "",
-      status: client.is_active ? "active" : "inactive",
-      businessName: subscriberProfile?.business_name,
-      userType: client.user_type as "Admin" | "Subscriber" | "Accountant" | "Vendor",
-      isActive: client.is_active,
+    const planStatus = subscriberProfile?.is_subscription_active || subscriberProfile?.is_free_subscription_active 
+      ? "active" 
+      : "inactive";
+
+    // Get tax pro name
+    let taxPro = "N/A";
+    if (accountantProfile?.user_profile) {
+      const { first_name, last_name, email } = accountantProfile.user_profile;
+      if (first_name && last_name) {
+        taxPro = `${first_name} ${last_name}`;
+      } else {
+        taxPro = email || "N/A";
+      }
+    }
+
+    const transformedClient = {
+      id: clientData.id,
+      firstName: clientData.first_name || '',
+      lastName: clientData.last_name || '',
+      email: clientData.email,
+      phone: clientData.phone || '',
+      phoneCode: clientData.phone_code || '+1',
+      addedOn,
+      currentPlan,
+      planStatus,
+      referredBy: clientData.referred_by || '--',
+      status: clientData.is_active ? 'active' : 'inactive',
+      businessName: subscriberProfile?.business_name || subscriberProfile?.legal_business_name,
+      userType: clientData.user_type,
+      isActive: clientData.is_active,
       isSubscriptionActive: subscriberProfile?.is_subscription_active || false,
       planStartDate: subscriberProfile?.plan_start_date,
       planEndDate: subscriberProfile?.plan_end_date,
-      taxPro: null // This field doesn't exist in the schema, will need to be added if needed
+      taxPro,
     };
 
     return NextResponse.json({
       success: true,
-      data: formattedClient
+      data: transformedClient,
     });
 
   } catch (error) {
-    console.error("Error fetching client:", error);
+    console.error("Error in client details API:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

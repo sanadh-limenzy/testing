@@ -104,7 +104,7 @@ async function getClients(page: number = 1): Promise<ClientsResponse> {
   // Transform the data
   const transformedUsers = users?.map((user) => {
     const subscriberProfile = user.subscriber_profile?.[0];
-    const plan = subscriberProfile?.plans;
+    const plan = subscriberProfile?.plan;
     
     const addedOn = new Date(user.created_at).toLocaleDateString('en-US', {
       year: 'numeric',

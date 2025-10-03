@@ -27,11 +27,25 @@ export const useCompleteEvent = () => {
     },
     onSuccess: (data, eventId) => {
       toast.success(data.message);
-      
+
       // Invalidate relevant queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["event", eventId] });
-      queryClient.invalidateQueries({ queryKey: ["events-per-rental-address"] });
+      queryClient.invalidateQueries({
+        queryKey: ["events-per-rental-address"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["events-from-business-address"],
+      });
+      queryClient.cancelQueries({ queryKey: ["events-from-rental-address"] });
+      queryClient.cancelQueries({ queryKey: ["events-from-business-address"] });
+      queryClient.refetchQueries({ queryKey: ["events-from-rental-address"] });
+      queryClient.refetchQueries({
+        queryKey: ["events-from-business-address"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-clients", "events"] });
+      queryClient.cancelQueries({ queryKey: ["admin-clients", "events"] });
+      queryClient.refetchQueries({ queryKey: ["admin-clients", "events"] });
     },
     onError: (error) => {
       toast.error(error.message);
