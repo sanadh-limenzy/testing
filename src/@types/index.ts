@@ -502,3 +502,107 @@ export interface SendPacketDatabase {
   created_at?: string;
   updated_at?: string;
 }
+
+type PaymentType =
+  | "subscription"
+  | "withdrawal"
+  | "event_tax"
+  | "rental_address";
+type TransactionStatus =
+  | "pending"
+  | "released"
+  | "approved"
+  | "flagged"
+  | "refunded"
+  | "completed"
+  | "cancelled";
+
+type TransactionBy = "card" | "bank_transfer" | "cash" | "other";
+
+export interface TransactionDatabase {
+  id: string; // uuid
+  mongo_id?: string | null;
+  transaction_id?: string | null;
+  description?: string | null;
+  payment_type?: PaymentType | null;
+  plan_id?: string | null;
+  plan_type?: PlanType | null;
+  plan_title?: string | null;
+  promo_code?: string | null;
+  is_applied_code?: boolean | null;
+  promo_code_id?: string | null;
+  event_id?: string | null;
+  rental_address_id?: string | null;
+  is_trial_transaction?: boolean | null;
+  plan_amount?: number | null;
+  wallet_discount_amount?: number | null;
+  promo_discount_amount?: number | null;
+  amount?: number | null;
+  tax_amount?: number | null;
+  transaction_date?: string | Date | null; // timestamptz
+  require_transfer?: boolean | null;
+  transfer_group?: string | null;
+  user_id?: string | null;
+  status?: TransactionStatus | null;
+  is_refunded?: boolean | null;
+  refunded_by?: string | null;
+  reason?: string | null;
+  refunded_at?: string | Date | null;
+  plan_active_year?: string | null;
+  transaction_by?: TransactionBy | null;
+  card_details?: Record<string, unknown> | null;
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
+}
+
+// Promo Code Types
+export interface PromoCodeDatabase {
+  id: string; // uuid
+  mongo_id?: string | null;
+  created_by?: string | null;
+  is_plant_specific?: boolean | null;
+  promo_type?: "All" | "Individual" | null;
+  promo_for?: string[] | null;
+  is_unlimited_promo?: boolean | null;
+  no_of_promo_allow_to_used?: number | null;
+  used_by_count?: number | null;
+  name?: string | null;
+  code?: string | null;
+  is_flat_discount?: boolean | null;
+  discount_amount?: number | null;
+  discount_percent?: number | null;
+  start_at?: string | Date | null;
+  expire_at?: string | Date | null;
+  is_delete_after_use?: boolean | null;
+  is_one_time_user?: boolean | null;
+  is_active?: boolean | null;
+  is_delete?: boolean | null;
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
+}
+
+export interface PromoCodeUsage {
+  id: string;
+  promo_code_id: string;
+  user_id: string;
+  transaction_id?: string | null;
+  used_at: string;
+  discount_amount: number;
+  created_at?: string;
+}
+
+// Junction table for promo code allowed plans
+export interface PromoCodeAllowedPlan {
+  id: string;
+  promo_code_id: string;
+  plan_id: string;
+  created_at?: string;
+}
+
+// Junction table for promo code usage tracking
+export interface PromoCodeUsedBy {
+  id: string;
+  promo_code_id: string;
+  user_id: string;
+  used_at?: string;
+}

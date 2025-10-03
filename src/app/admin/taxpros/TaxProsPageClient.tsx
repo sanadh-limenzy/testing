@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TaxProsFilter } from "@/components/admin/TaxProsFilter";
 import { TaxProsTable } from "@/components/admin/TaxProsTable";
@@ -13,9 +13,8 @@ interface TaxPro {
   phone: string;
   phoneCode: string;
   addedOn: string;
-  companyPosition?: string;
-  isSuperAdmin: boolean;
-  allowAllAccess: boolean;
+  businessName?: string;
+  businessEntityType?: string;
   status: "active" | "inactive";
   userType: "Admin" | "Subscriber" | "Accountant" | "Vendor";
   isActive: boolean;
@@ -57,7 +56,11 @@ export function TaxProsPageClient({
     sortOrder: "desc",
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+
+  // Debug: Monitor query key changes
+  useEffect(() => {
+    console.log("Taxpro query key changed:", { currentPage, filters });
+  }, [currentPage, filters]);
 
   // Fetch tax pros data
   const {
@@ -66,39 +69,37 @@ export function TaxProsPageClient({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["taxPros", currentPage, filters, searchTerm],
+    queryKey: ["taxPros", currentPage, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: "15",
         addedDate: filters.addedDate,
         status: filters.status,
-        accessLevel: filters.accessLevel,
-        search: searchTerm,
+        search: filters.search,
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder,
       });
 
+      console.log("Making taxpros API call with params:", Object.fromEntries(params));
       const response = await fetch(`/api/admin/taxpros?${params}`);
       if (!response.ok) {
         throw new Error("Failed to fetch tax pros");
       }
       return response.json();
     },
-    initialData: {
-      success: true,
-      data: initialTaxPros,
-      pagination: initialPagination,
-    },
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    staleTime: 0, // Always consider data stale to allow refetching
   });
 
   const handleFilterChange = (newFilters: FilterState) => {
+    console.log("Taxpro filter change triggered:", newFilters);
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleSearch = (search: string) => {
-    setSearchTerm(search);
+    setFilters(prev => ({ ...prev, search }));
     setCurrentPage(1); // Reset to first page when searching
   };
 
@@ -111,7 +112,6 @@ export function TaxProsPageClient({
       sortBy: "addedOn",
       sortOrder: "desc",
     });
-    setSearchTerm("");
     setCurrentPage(1);
   };
 
@@ -165,7 +165,7 @@ export function TaxProsPageClient({
         {/* Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <TaxProsTable
-            initialTaxPros={taxProsData?.data || []}
+            initialTaxPros={taxProsData?.data || initialTaxPros}
             initialPagination={taxProsData?.pagination || initialPagination}
             onPageChange={handlePageChange}
             loading={isLoading}

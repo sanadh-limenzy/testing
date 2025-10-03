@@ -24,7 +24,7 @@ interface TeamMember {
   companyPosition?: string;
   isSuperAdmin: boolean;
   allowAllAccess: boolean;
-  permissionLevel: 'Super Admin' | 'Admin' | 'Employee' | 'Subscriber';
+  permissionLevel: "Super Admin" | "Admin" | "Employee" | "Subscriber";
   status: "active" | "inactive";
   userType: "Admin" | "Subscriber" | "Accountant" | "Vendor";
   isActive: boolean;
@@ -54,14 +54,14 @@ export function TeamMembersTable({
 }: TeamMembersTableProps) {
   const router = useRouter();
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
-  
+
   // Use the data passed from parent instead of internal state
   const teamMembers = initialTeamMembers;
   const pagination = initialPagination;
 
   const handlePageChange = (page: number) => {
     if (externalLoading) return;
-    
+
     if (onPageChange) {
       onPageChange(page);
     }
@@ -73,9 +73,10 @@ export function TeamMembersTable({
   ) => {
     // Status changes are now handled by React Query mutations
     // This function is kept for compatibility but doesn't update local state
-    console.log(`Status change for team member ${teamMemberId} to ${newStatus}`);
+    console.log(
+      `Status change for team member ${teamMemberId} to ${newStatus}`
+    );
   };
-
 
   const handleCopyEmail = async (teamMember: TeamMember) => {
     toast.dismiss();
@@ -94,107 +95,110 @@ export function TeamMembersTable({
     router.push(`/admin/team-members/${teamMemberId}`);
   };
 
-
   return (
     <TooltipProvider>
       <div className="bg-white">
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <table className="w-full min-w-[600px]">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Name
-              </th>
-              <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Email
-              </th>
-              <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Permission Level
-              </th>
-              <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {externalLoading ? (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500 ">
-                  Loading...
-                </td>
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
+                  Name
+                </th>
+                <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
+                  Email
+                </th>
+                <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
+                  Permission Level
+                </th>
+                <th className="text-left py-4 px-6 font-medium text-gray-700 whitespace-nowrap">
+                  Status
+                </th>
               </tr>
-            ) : teamMembers.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500 ">
-                  No team members found
-                </td>
-              </tr>
-            ) : (
-              teamMembers.map((teamMember) => (
-                <tr 
-                  key={teamMember.id} 
-                  className="border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleRowClick(teamMember.id)}
-                >
-                  <td className="py-4 px-6">
-                    <div className="font-medium text-gray-900">
-                      {teamMember.firstName} {teamMember.lastName}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-900">{teamMember.email}</span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopyEmail(teamMember);
-                            }}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          >
-                            {copiedEmailId === teamMember.id ? (
-                              <Check className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Mail className="w-3 h-3 text-gray-500 hover:text-blue-600 transition-colors" />
-                            )}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            {copiedEmailId === teamMember.id
-                              ? "Email copied!"
-                              : "Copy email"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      teamMember.permissionLevel === 'Super Admin'
-                        ? 'bg-red-100 text-red-800' 
-                        : teamMember.permissionLevel === 'Admin'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : teamMember.permissionLevel === 'Employee'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {teamMember.permissionLevel}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 whitespace-nowrap">
-                    <TeamMemberStatusSelect
-                      teamMemberId={teamMember.id}
-                      currentStatus={teamMember.status}
-                      onStatusChange={handleStatusChange}
-                    />
+            </thead>
+            <tbody>
+              {externalLoading ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-gray-500 ">
+                    Loading...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : teamMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-gray-500 ">
+                    No team members found
+                  </td>
+                </tr>
+              ) : (
+                teamMembers.map((teamMember) => (
+                  <tr
+                    key={teamMember.id}
+                    className="border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handleRowClick(teamMember.id)}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="font-medium text-gray-900">
+                        {teamMember.firstName} {teamMember.lastName}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900">
+                          {teamMember.email}
+                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyEmail(teamMember);
+                              }}
+                              className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            >
+                              {copiedEmailId === teamMember.id ? (
+                                <Check className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <Mail className="w-3 h-3 text-gray-500 hover:text-blue-600 transition-colors" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {copiedEmailId === teamMember.id
+                                ? "Email copied!"
+                                : "Copy email"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          teamMember.permissionLevel === "Super Admin"
+                            ? "bg-red-100 text-red-800"
+                            : teamMember.permissionLevel === "Admin"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : teamMember.permissionLevel === "Employee"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {teamMember.permissionLevel}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <TeamMemberStatusSelect
+                        teamMemberId={teamMember.id}
+                        currentStatus={teamMember.status}
+                        onStatusChange={handleStatusChange}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         {pagination.totalPages > 1 && (
@@ -209,4 +213,3 @@ export function TeamMembersTable({
     </TooltipProvider>
   );
 }
-
