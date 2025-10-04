@@ -16,13 +16,16 @@ import { getInitials } from "@/lib/string-utils";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuthContext } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function Navbar() {
+  const queryClient = useQueryClient();
   const { user, signOut } = useAuthContext();
   const { userData } = useUserData();
 
   const handleLogout = async () => {
     await signOut();
+    queryClient.clear()
   };
 
   return (
