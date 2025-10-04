@@ -166,7 +166,7 @@ export function CustomerRowWithAccordion({
             </div>
             
             {/* Residence Cards Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="flex overflow-x-auto gap-4 items-start">
               {hasResidenceData ? (
                 residences.map((residence) => (
                   <ResidenceCard
